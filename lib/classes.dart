@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 enum QuantityType {
   cups,
   cans,
@@ -7,32 +9,46 @@ enum QuantityType {
   fl_oz,
 }
 
+Map<String, QuantityType> strToQuantity = {
+  'cups': QuantityType.cups,
+  'cans': QuantityType.cans,
+  'gallons': QuantityType.gallons,
+  'ct': QuantityType.ct,
+  'lbs': QuantityType.lbs,
+  'fl_oz': QuantityType.fl_oz
+};
+
+String quantityToString(QuantityType q) {
+  switch (q) {
+    case QuantityType.cups:
+      return 'cups';
+    case QuantityType.cans:
+      return 'cans';
+    case QuantityType.gallons:
+      return 'gallons';
+    case QuantityType.ct:
+      return 'ct';
+    case QuantityType.lbs:
+      return 'lbs';
+    case QuantityType.fl_oz:
+      return 'fl oz';
+    default:
+      return '';
+  }
+
+}
+
 class GroceryItem {
   QuantityType q;
+  String id;
   String name;
   double amount;
 
   // syntactic sugar for init list
-  GroceryItem(this.q, this.name, this.amount);
+  GroceryItem(this.q, this.id, this.name, this.amount);
 
-  String getQuantityString() {
-    String ret = amount.toStringAsFixed(2) + ' ';
-    switch (q) {
-      case QuantityType.cups:
-        return ret + 'cups';
-      case QuantityType.cans:
-        return ret + 'cans';
-      case QuantityType.gallons:
-        return ret + 'gallons';
-      case QuantityType.ct:
-        return ret + 'ct';
-      case QuantityType.lbs:
-        return ret + 'lbs';
-      case QuantityType.fl_oz:
-        return ret + 'fl oz';
-      default:
-        return ret;
-    }
+  String getAsString() {
+    return amount.toStringAsFixed(2) + ' ' + quantityToString(q);
   }
   // image
 }
