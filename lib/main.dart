@@ -1,11 +1,28 @@
 import 'package:flutter/material.dart';
 import 'classes.dart';
+import 'receipt_scan_page.dart';
 import 'dart:collection';
+import 'package:camera/camera.dart';
 
-void main() => runApp(MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final cameras = await availableCameras();
+  final firstCamera = cameras.first;
+  runApp(MaterialApp(
+    theme: ThemeData.dark(),
+    home: PageView(
+      controller: PageController(
+        initialPage: 0,
+      ),
+      children: <Widget>[
+        HomePage(),
+        ReceiptScanPage(mainCam: firstCamera),
+      ]
+    )
+  ));
+}
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +31,15 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.teal,
       ),
-      home: HomePage()
+      home: PageView(
+        controller: PageController(
+          initialPage: 0
+        ),
+        children: <Widget>[
+          HomePage(),
+          ReceiptScanPage()
+        ]
+      )//HomePage()
     );
   }
 }
