@@ -7,15 +7,17 @@ enum QuantityType {
   ct,
   lbs,
   fl_oz,
+  unknown,
 }
 
 Map<String, QuantityType> strToQuantity = {
+  'unknown': QuantityType.unknown,
   'cups': QuantityType.cups,
   'cans': QuantityType.cans,
   'gallons': QuantityType.gallons,
   'ct': QuantityType.ct,
   'lbs': QuantityType.lbs,
-  'fl_oz': QuantityType.fl_oz
+  'fl_oz': QuantityType.fl_oz,
 };
 
 String quantityToString(QuantityType q) {

@@ -80,6 +80,7 @@ class InventoryState extends State<HomePage> {
     );
   }
 
+  // builds the Widget displaying all inventory items
   Widget _myListView(BuildContext context) {
     return ListView.builder(
       itemCount: inventoryList.length,
@@ -94,6 +95,7 @@ class InventoryState extends State<HomePage> {
     );
   }
 
+  // handler for adding new inventory items
   void promptItem(BuildContext context) {
     showDialog<Widget>(
       context: context,
@@ -121,6 +123,7 @@ class InventoryState extends State<HomePage> {
   }
 }
 
+// class to handle adding new inventory items via input prompt
 // dialog must have its own state for dropdown to work
 class PromptDialog extends StatefulWidget {
   PromptDialog({Key key, this.addToList}) : super(key: key);
@@ -134,8 +137,8 @@ class PromptDialog extends StatefulWidget {
 }
 
 class PromptDialogState extends State<PromptDialog> {
-  String selectedString = quantityToString(QuantityType.lbs);
-  QuantityType selectedQ = QuantityType.lbs;
+  String selectedString = quantityToString(QuantityType.unknown);
+  QuantityType selectedQ = QuantityType.unknown;
   String item;
   double amount;
 

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:path/path.dart';
+import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 
 /*class ReceiptScanPage extends StatelessWidget {
 
@@ -86,15 +87,31 @@ class ImageState extends State<ReceiptScanPage> {
         '${DateTime.now()}.png',
       );
       await _camController.takePicture(path);
+      doVision(path);
+      /*
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => DisplayPictureScreen(imagePath: path)
         ),
-      );
+      );*/
+
     } catch (e) {
       print(e);
     }
+  }
+
+  doVision(String path) async {
+    File img = File(path);
+    FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(img);
+    TextRecognizer tr = FirebaseVision.instance.textRecognizer();
+    VisionText vt = await tr.processImage(visionImage);
+    for (TextBlock block in vt.blocks) {
+      for (TextLine line in block.lines) {
+        print(line.text);
+      }
+    }
+    print(vt.text);
   }
 }
 
