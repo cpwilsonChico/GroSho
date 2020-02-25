@@ -3,11 +3,15 @@ import 'classes.dart';
 import 'receipt_scan_page.dart';
 import 'dart:collection';
 import 'package:camera/camera.dart';
+import 'storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final cameras = await availableCameras();
   final firstCamera = cameras.first;
+
+  Databaser db = new Databaser();
+
   runApp(MaterialApp(
     theme: ThemeData.dark(),
     home: PageView(
@@ -15,13 +19,13 @@ void main() async {
         initialPage: 0,
       ),
       children: <Widget>[
-        HomePage(),
+        HomePage(db: db),
         ReceiptScanPage(mainCam: firstCamera),
       ]
     )
   ));
 }
-
+/*
 class MyApp extends StatelessWidget {
 
   @override
@@ -42,28 +46,47 @@ class MyApp extends StatelessWidget {
       )//HomePage()
     );
   }
-}
+}*/
 
 class HomePage extends StatefulWidget {
-  HomePage({Key key}) : super(key: key);
+  HomePage({Key key, this.db}) : super(key: key);
+
+  final Databaser db;
 
   @override
-  InventoryState createState() => InventoryState();
+  InventoryState createState() => InventoryState(db);
 }
 
 class InventoryState extends State<HomePage> {
+
+  Databaser db;
 
   List<GroceryItem> inventoryList;
   HashMap<String, int> quantityMap;
   QuantityType curQuan;
   String curQuanString;
 
-  InventoryState() {
+  InventoryState(this.db) {
     // list of all foods in inventory
     inventoryList = new List<GroceryItem>();
     // map of food names to index in list
     quantityMap = new HashMap<String, int>();
     curQuanString = quantityToString(QuantityType.fl_oz);
+  }
+
+  // on load, read from database
+  @override
+  void initState() {
+    super.initState();
+    loadFromDB();
+
+  }
+
+  void loadFromDB() async {
+    List<Map> maps = await db.getAll();
+    for (Map m in maps) {
+      addItem(GroceryItem.fromMap(m));
+    }
   }
 
   @override
@@ -119,6 +142,9 @@ class InventoryState extends State<HomePage> {
         quantityMap[item.id] = inventoryList.length;
         inventoryList.add(item);
       }
+
+      db.insert(item);
+
     });
   }
 }
