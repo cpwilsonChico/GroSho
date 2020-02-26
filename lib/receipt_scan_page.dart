@@ -87,7 +87,7 @@ class ImageState extends State<ReceiptScanPage> {
         '${DateTime.now()}.png',
       );
       await _camController.takePicture(path);
-      doVision(path);
+      doVision(path, context);
       /*
       Navigator.push(
         context,
@@ -101,7 +101,7 @@ class ImageState extends State<ReceiptScanPage> {
     }
   }
 
-  doVision(String path) async {
+  doVision(String path, BuildContext context) async {
     File img = File(path);
     FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(img);
     TextRecognizer tr = FirebaseVision.instance.textRecognizer();
@@ -111,7 +111,11 @@ class ImageState extends State<ReceiptScanPage> {
         print(line.text);
       }
     }
-    print(vt.text);
+    Navigator.push(context, MaterialPageRoute(builder: (context) {
+      return Scaffold(
+        body: Text(vt.text),
+      );
+    }));
   }
 }
 
