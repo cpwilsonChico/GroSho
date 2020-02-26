@@ -12,6 +12,7 @@ enum QuantityType {
 
 Map<String, QuantityType> strToQuantity = {
   'unknown': QuantityType.unknown,
+  'None': QuantityType.unknown,
   'cups': QuantityType.cups,
   'cans': QuantityType.cans,
   'gallons': QuantityType.gallons,
@@ -34,6 +35,8 @@ String quantityToString(QuantityType q) {
       return 'lbs';
     case QuantityType.fl_oz:
       return 'fl oz';
+    case QuantityType.unknown:
+      return 'None';
     default:
       return '';
   }
@@ -55,14 +58,16 @@ class GroceryItem {
     name = map['_name'];
     amount = map['_amount'];
     q = QuantityType.values[map['_type']];
+
   }
 
   String getID() {
     return id;
   }
 
-  String getAsString() {
-    return amount.toStringAsFixed(2) + ' ' + quantityToString(q);
+  String getQuantityAsString() {
+
+    return amount.toStringAsFixed(2) + ' ' + ((q==QuantityType.unknown) ? '' : quantityToString(q));
   }
 
   Map<String, dynamic> toMap() {

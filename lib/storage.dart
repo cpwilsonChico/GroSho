@@ -6,7 +6,7 @@ import 'classes.dart';
 // stores reference to the SQLite database
 
 class Databaser {
-  var inv;
+  Database inv;
   bool initialized = false;
   static const String DB_NAME = "inventory";
 
@@ -27,6 +27,15 @@ class Databaser {
     initialized = true;
   }
 
+  Future update(GroceryItem gi) async {
+    if (!await(checkIfExists(gi.getID()))) {
+      print("attempt to update non-existent grocery item in database");
+      return;
+    }
+    await inv.update(DB_NAME, gi.toMap(),
+    where: '_id = ?', whereArgs: [gi.getID()]);
+  }
+
   // either adds new row or updates existing
   Future insert(GroceryItem gi) async {
     if (await checkIfExists(gi.getID())) {
@@ -35,6 +44,10 @@ class Databaser {
     } else {
       await inv.insert(DB_NAME, gi.toMap());
     }
+  }
+
+  Future delete(GroceryItem gi) async {
+    await inv.delete(DB_NAME, where: '_id = ?', whereArgs: [gi.getID()]);
   }
 
   Future<bool> checkIfExists(String id) async {

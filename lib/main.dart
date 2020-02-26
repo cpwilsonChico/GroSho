@@ -103,6 +103,7 @@ class InventoryState extends State<HomePage> {
     );
   }
 
+
   // builds the Widget displaying all inventory items
   Widget _myListView(BuildContext context) {
     return ListView.builder(
@@ -110,24 +111,54 @@ class InventoryState extends State<HomePage> {
       itemBuilder: (context, index) {
         return Card(
             child: ListTile(
+                onTap: () => promptItem(context, gi: inventoryList[index], giIndex: index),
+                onLongPress: () => promptDelete(context, index),
                 title: Text(inventoryList[index].name),
-                leading: Text(inventoryList[index].getAsString())
+                leading: Text(inventoryList[index].getQuantityAsString())
             )
         );
       },
     );
   }
 
-  // handler for adding new inventory items
-  void promptItem(BuildContext context) {
+  void promptDelete(BuildContext context, int giIndex) {
     showDialog<Widget>(
       context: context,
       builder: (context) {
         return SimpleDialog(
-          title: Text("Add to inventory:"),
+          title: Text("Delete '${inventoryList[giIndex].name}'?"),
           contentPadding: EdgeInsets.all(15.0),
           children: <Widget>[
-            PromptDialog(addToList: addItem),
+            RaisedButton(
+              color: Color.fromARGB(255, 175, 80, 80),
+              child: Text("Yes"),
+              onPressed: () {
+                deleteItem(giIndex);
+                Navigator.pop(context);
+              },
+            ),
+            SizedBox(height: 10),
+            RaisedButton(
+              child: Text("No"),
+              color: Color.fromARGB(255, 40, 40, 40),
+              onPressed: () => Navigator.pop(context),
+            )
+          ]
+        );
+      }
+    );
+  }
+
+  // handler for adding new or editing existing inventory items
+  void promptItem(BuildContext context, {GroceryItem gi, int giIndex}) {
+    showDialog<Widget>(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: (gi==null) ? Text("Add to inventory:") : Text("Changing info:"),
+          contentPadding: EdgeInsets.all(15.0),
+          children: <Widget>[
+            PromptDialog(addToList: addItem, updateList: updateItem, editItem: gi, giIndex: giIndex),
           ]
         );
       }
@@ -144,46 +175,116 @@ class InventoryState extends State<HomePage> {
       }
 
       db.insert(item);
-
     });
+  }
+
+  void updateItem(int index, QuantityType q, double amount) {
+    inventoryList[index].q = q;
+    inventoryList[index].amount = amount;
+    setState(()=>{});
+    db.update(inventoryList[index]);
+  }
+
+  void deleteItem(int index) {
+    quantityMap.remove(inventoryList[index].getID());
+    db.delete(inventoryList[index]);
+    inventoryList.removeAt(index);
+    setState(()=>{});
   }
 }
 
 // class to handle adding new inventory items via input prompt
 // dialog must have its own state for dropdown to work
 class PromptDialog extends StatefulWidget {
-  PromptDialog({Key key, this.addToList}) : super(key: key);
+  PromptDialog({Key key, this.addToList, this.updateList, this.editItem, this.giIndex}) : super(key: key);
 
   // callback function to communicate with parent widget
   // adds a grocery item to the inventory
   final void Function(GroceryItem) addToList;
+  final void Function(int, QuantityType, double) updateList;
+  final GroceryItem editItem;
+  final int giIndex;
 
   @override
-  PromptDialogState createState() => new PromptDialogState();
+  PromptDialogState createState() {
+    if (editItem == null) {
+      return new PromptDialogState();
+    } else {
+      return new PromptDialogState.edit(editItem, giIndex);
+    }
+  }
 }
 
 class PromptDialogState extends State<PromptDialog> {
-  String selectedString = quantityToString(QuantityType.unknown);
-  QuantityType selectedQ = QuantityType.unknown;
+
+  @override
+  PromptDialogState() : super() {
+    selectedString = quantityToString(QuantityType.unknown);
+    selectedQ = QuantityType.unknown;
+    isEditing = false;
+    editItem = null;
+  }
+
+  PromptDialogState.edit(GroceryItem gi, int index) {
+    selectedString = quantityToString(gi.q);
+    selectedQ = gi.q;
+    item = gi.name;
+    amount = gi.amount;
+    isEditing = true;
+    editItem = gi;
+    giIndex = index;
+  }
+
+  GroceryItem editItem;
+  String selectedString;
+  QuantityType selectedQ;
   String item;
   double amount;
+  bool isEditing;
+  int giIndex;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: <Widget>[
+        SizedBox(
+          width: 280,
+          // input for food name
+          child: (!isEditing) ? TextField(
+            // let user change name when adding item
+              onChanged: (String input) {
+                setState(() => item=input);
+              },
+              decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Item'
+              )
+            // prevent user from changing name when editing item
+          ) : SizedBox(
+            child: Text(
+              item,
+              style: TextStyle(
+                fontSize: 24,
+              )
+            ),
+            height: 40,
+          ),
+        ),
+        SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               SizedBox(
                 width: 120,
-                child: TextField(
+                // input for amount (number)
+                child: TextFormField(
                     onChanged: (String input) {
                       setState( () {
                         amount = double.parse(input);
                       });
                     },
+                    initialValue: (amount==null) ? '' : amount.toStringAsFixed(2),
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                         border: OutlineInputBorder(),
@@ -209,23 +310,14 @@ class PromptDialogState extends State<PromptDialog> {
             ]
         ),
         SizedBox(height: 10),
-        SizedBox(
-          width: 280,
-          child: TextField(
-              onChanged: (String input) {
-                setState(() => item=input);
-              },
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Item'
-              )
-          ),
-        ),
-        SizedBox(height: 10),
         RaisedButton(
           onPressed: () {
-            GroceryItem gi = new GroceryItem(selectedQ, item, item, amount);
-            widget.addToList(gi);
+            if (isEditing) {
+              widget.updateList(giIndex, selectedQ, amount);
+            } else {
+              GroceryItem gi = new GroceryItem(selectedQ, item, item, amount);
+              widget.addToList(gi);
+            }
             Navigator.pop(context);
           },
           child: Text("Done"),
