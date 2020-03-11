@@ -2,27 +2,40 @@ import 'package:sqflite/sqflite.dart';
 import 'classes.dart';
 
 
-
+// singleton
 // stores reference to the SQLite database
-
 class Databaser {
-  Database inv;
-  bool initialized = false;
-  static const String DB_NAME = "inventory";
+  static Database inv;
+  static bool initialized = false;
+  static bool oneExists = false;
+  static const String INV_DB = "inventory";
+  static const String COST_DB = "purchases";
 
-  Databaser() {
+  static final Databaser _databaser = Databaser._internal();
+  factory Databaser() => _databaser;
+  Databaser._internal() {
     initDB();
   }
 
-  Future initDB() async {
+  static Future initDB() async {
     if (initialized) return;
     inv = await openDatabase('inventory.db', version: 1, onCreate: (Database db, int version) async {
       await db.execute('''
-    CREATE TABLE inventory(
+    CREATE TABLE $INV_DB(
     _id text PRIMARY KEY,
-    _name text,
+    _name TEXT,
     _type INTEGER,
     _amount REAL)''');
+      await db.execute('''
+    CREATE TABLE $COST_DB(
+    _id INTEGER PRIMARY KEY AUTOINCREMENT,
+    _year TEXT,
+    _month TEXT,
+    _day TEXT,
+    _clockTime TEXT,
+    _dollars INTEGER,
+    _cents INTEGER)
+      ''');
     });
     initialized = true;
   }
@@ -32,32 +45,50 @@ class Databaser {
       print("attempt to update non-existent grocery item in database");
       return;
     }
-    await inv.update(DB_NAME, gi.toMap(),
+    await inv.update(INV_DB, gi.toMap(),
     where: '_id = ?', whereArgs: [gi.getID()]);
   }
 
   // either adds new row or updates existing
   Future insert(GroceryItem gi) async {
     if (await checkIfExists(gi.getID())) {
-      await inv.update(DB_NAME, gi.toMap(),
+      await inv.update(INV_DB, gi.toMap(),
         where: '_id = ?', whereArgs: [gi.getID()]);
     } else {
-      await inv.insert(DB_NAME, gi.toMap());
+      await inv.insert(INV_DB, gi.toMap());
     }
   }
 
   Future delete(GroceryItem gi) async {
-    await inv.delete(DB_NAME, where: '_id = ?', whereArgs: [gi.getID()]);
+    await inv.delete(INV_DB, where: '_id = ?', whereArgs: [gi.getID()]);
   }
 
   Future<bool> checkIfExists(String id) async {
-    List<Map> result = await inv.query(DB_NAME, where: '_id == ?', whereArgs: [id]);
+    List<Map> result = await inv.query(INV_DB, where: '_id == ?', whereArgs: [id]);
     return result.length == 1;
   }
 
   Future<List<Map>> getAll() async {
     await initDB();
-    List<Map> maps = await inv.query(DB_NAME);
+    List<Map> maps = await inv.query(INV_DB);
+    return maps;
+  }
+
+  Future updatePurchase(int dollars, int cents, DateTime date) async {
+
+  }
+
+  Future insertPurchase(int dollars, int cents, DateTime date) async {
+
+  }
+
+  Future deletePurchase() async {
+
+  }
+
+  static Future getAllPurchases() async {
+    await Databaser.initDB();
+    List<Map> maps = await inv.query(COST_DB);
     return maps;
   }
 

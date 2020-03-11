@@ -4,6 +4,8 @@ import 'receipt_scan_page.dart';
 import 'dart:collection';
 import 'package:camera/camera.dart';
 import 'storage.dart';
+import 'budget_page.dart';
+import 'package:edit_distance/edit_distance.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,37 +18,16 @@ void main() async {
     theme: ThemeData.dark(),
     home: PageView(
       controller: PageController(
-        initialPage: 0,
+        initialPage: 1,
       ),
       children: <Widget>[
+        BudgetPageFrame(),
         HomePage(db: db),
         ReceiptScanPage(mainCam: firstCamera),
       ]
     )
   ));
 }
-/*
-class MyApp extends StatelessWidget {
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'GroSho',
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-      ),
-      home: PageView(
-        controller: PageController(
-          initialPage: 0
-        ),
-        children: <Widget>[
-          HomePage(),
-          ReceiptScanPage()
-        ]
-      )//HomePage()
-    );
-  }
-}*/
 
 class HomePage extends StatefulWidget {
   HomePage({Key key, this.db}) : super(key: key);
@@ -79,7 +60,6 @@ class InventoryState extends State<HomePage> {
   void initState() {
     super.initState();
     loadFromDB();
-
   }
 
   void loadFromDB() async {

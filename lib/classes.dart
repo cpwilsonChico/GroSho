@@ -66,7 +66,7 @@ class GroceryItem {
   }
 
   String getQuantityAsString() {
-
+    if (amount == null) return '';
     return amount.toStringAsFixed(2) + ' ' + ((q==QuantityType.unknown) ? '' : quantityToString(q));
   }
 
@@ -78,5 +78,54 @@ class GroceryItem {
       "_amount": amount,
     };
     return tempMap;
+  }
+}
+
+
+class PurchaseRecord {
+  PurchaseRecord(this.dollars, this.cents, this.year, this.month, this.day, this.clockTime) {
+    dollars += (cents % 100);
+    cents %= 100;
+  }
+  int dollars;
+  int cents;
+  String year;
+  String month;
+  String day;
+  String clockTime;
+  int id;
+
+  Map<String, dynamic> toMap() {
+    Map<String, dynamic> map = <String, dynamic> {
+      "_dollars": dollars,
+      "_cents": cents,
+      "_year": year,
+      "_month": month,
+      "_day": day,
+      "_clockTime": clockTime,
+    };
+    if (id != null) {
+      map["_id"] = id;
+    }
+
+    return map;
+  }
+
+  PurchaseRecord.fromMap(Map<String, dynamic> map) {
+    dollars = map["_dollars"];
+    cents = map["_cents"];
+    year = map["_year"];
+    month = map["_month"];
+    day = map["_day"];
+    clockTime = map["_clockTime"];
+    id = map["_id"];
+  }
+
+  String getDate() {
+    return year + "-" + month + "-" + day + " " + clockTime;
+  }
+
+  String getDollarAmount() {
+    return "\$ " + dollars.toString() + "." + cents.toString();
   }
 }
