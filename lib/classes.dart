@@ -83,49 +83,67 @@ class GroceryItem {
 
 
 class PurchaseRecord {
-  PurchaseRecord(this.dollars, this.cents, this.year, this.month, this.day, this.clockTime) {
-    dollars += (cents % 100);
-    cents %= 100;
+  PurchaseRecord(this._dollars, this._cents, this._year, this._month, this._day, this._clockTime) {
+    if (_cents >= 100) {
+      _dollars += _cents ~/ 100;
+      _cents %= 100;
+    }
+
+    _date = DateTime.parse(_year + "-" + _month + "-" + _day + " " + _clockTime);
   }
-  int dollars;
-  int cents;
-  String year;
-  String month;
-  String day;
-  String clockTime;
-  int id;
+  int _dollars;
+  int _cents;
+  String _year;
+  String _month;
+  String _day;
+  String _clockTime;
+  int _id;
+  DateTime _date;
 
   Map<String, dynamic> toMap() {
     Map<String, dynamic> map = <String, dynamic> {
-      "_dollars": dollars,
-      "_cents": cents,
-      "_year": year,
-      "_month": month,
-      "_day": day,
-      "_clockTime": clockTime,
+      "_dollars": _dollars,
+      "_cents": _cents,
+      "_year": _year,
+      "_month": _month,
+      "_day": _day,
+      "_clockTime": _clockTime,
     };
-    if (id != null) {
-      map["_id"] = id;
+    if (_id != null) {
+      map["_id"] = _id;
     }
 
     return map;
   }
 
   PurchaseRecord.fromMap(Map<String, dynamic> map) {
-    dollars = map["_dollars"];
-    cents = map["_cents"];
-    year = map["_year"];
-    month = map["_month"];
-    day = map["_day"];
-    clockTime = map["_clockTime"];
-    id = map["_id"];
+    _dollars = map["_dollars"];
+    _cents = map["_cents"];
+    _year = map["_year"];
+    _month = map["_month"];
+    _day = map["_day"];
+    _clockTime = map["_clockTime"];
+    _id = map["_id"];
   }
 
-  String getDate() {
-    return year + "-" + month + "-" + day + " " + clockTime;
+  String getDateAsString() {
+    return _year + "-" + _month + "-" + _day + " " + _clockTime;
   }
 
   String getDollarAmount() {
-    return "\$ " + dollars.toString() + "." + cents.toString();
+    return "\$ " + _dollars.toString() + "." + _cents.toString();
   }
+
+  double getDollarValue() {
+    return _dollars + (_cents / 100);
+  }
+
+  int getDayAsInt() {
+    return int.parse(_day);
+  }
+
+  DateTime getDate() {
+    return _date;
+  }
+
 }

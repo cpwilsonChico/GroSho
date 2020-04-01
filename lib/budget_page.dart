@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'classes.dart';
+import 'package:charts_flutter/flutter.dart' as charts;
 import 'storage.dart';
 
 
@@ -33,14 +34,69 @@ class BudgetState extends State<BudgetPage> {
 
   void loadFromDB() async {
     List<Map> maps = await Databaser.getAllPurchases();
-    purchases.add(PurchaseRecord(
-      23, 14, "2020", "03", "06", "14:06"
-    ));
+    print("all purchases: ");
+    print(maps);
+    purchases.add(PurchaseRecord(23, 14, "2020", "03", "06", "14:06:22"));
+    purchases.add(PurchaseRecord(6, 78, "2020", "03", "08", "15:08:21"));
+    purchases.add(PurchaseRecord(9, 78, "2020", "03", "18", "15:08:21"));
+    purchases.add(PurchaseRecord(150, 78, "2020", "03", "01", "15:08:21"));
+    purchases.add(PurchaseRecord(76, 78, "2020", "02", "26", "15:08:21"));
+    purchases.sort(purchaseCompare);
     setState((){});
   }
 
+  int purchaseCompare(PurchaseRecord a, PurchaseRecord b) {
+    return b.getDate().compareTo(a.getDate());
+  }
+
   Widget build(BuildContext context) {
-    return PurchaseHistory(purchases);
+
+    var series = [
+      new charts.Series(
+        id: 'test',
+        domainFn: (PurchaseRecord pr, _) => pr.getDate(),
+        measureFn: (PurchaseRecord pr, _) => pr.getDollarValue(),
+        colorFn: (PurchaseRecord pr, _) => new charts.Color(r: 255, g: 255, b: 255, a: 255),
+        data: purchases,
+      )
+    ];
+
+    var chart = new charts.TimeSeriesChart(
+      series,
+      dateTimeFactory: const charts.LocalDateTimeFactory(),
+      domainAxis: new charts.DateTimeAxisSpec(
+        renderSpec: new charts.SmallTickRendererSpec(
+            labelStyle: new charts.TextStyleSpec(
+              fontSize: 12,
+              color: charts.MaterialPalette.white,
+            )
+        ),
+      ),
+      primaryMeasureAxis: new charts.NumericAxisSpec(
+        renderSpec: new charts.SmallTickRendererSpec(
+          labelStyle: new charts.TextStyleSpec(
+            fontSize: 12,
+            color: charts.MaterialPalette.white,
+          )
+        )
+      )
+    );
+
+    var chartWidget = new Padding(
+      padding: EdgeInsets.all(8.0),
+      child: new SizedBox(
+        height: 200,
+        child: chart,
+      )
+    );
+
+    return ListView(
+      shrinkWrap: true,
+      children: <Widget>[
+        chartWidget,
+        PurchaseHistory(purchases),
+      ]
+    );
   }
 }
 
@@ -52,6 +108,7 @@ class PurchaseHistory extends StatelessWidget {
 
   Widget build(BuildContext context) {
     return ListView.builder(
+      shrinkWrap: true,
       itemCount: _purchases.length,
       itemBuilder: (context, index) {
         return PurchaseWidget(_purchases[index]);
@@ -69,11 +126,22 @@ class PurchaseWidget extends StatelessWidget {
 
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.all(8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text(_record.getDate()),
-          Text(_record.getDollarAmount()),
+          Padding(
+            padding: EdgeInsets.all(10.0),
+            child: Text(_record.getDollarAmount(), style: TextStyle(
+              fontSize: 16,
+            )),
+          ),
+          Padding(
+            padding: EdgeInsets.all(10.0),
+            child: Text(_record.getDateAsString(), style: TextStyle(
+              fontSize: 16,
+            )),
+          ),
         ]
       )
     );
