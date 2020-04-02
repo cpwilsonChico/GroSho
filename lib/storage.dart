@@ -40,7 +40,7 @@ class Databaser {
     initialized = true;
   }
 
-  Future update(GroceryItem gi) async {
+  static Future update(GroceryItem gi) async {
     if (!await(checkIfExists(gi.getID()))) {
       print("attempt to update non-existent grocery item in database");
       return;
@@ -50,7 +50,7 @@ class Databaser {
   }
 
   // either adds new row or updates existing
-  Future insert(GroceryItem gi) async {
+  static Future insert(GroceryItem gi) async {
     if (await checkIfExists(gi.getID())) {
       await inv.update(INV_DB, gi.toMap(),
         where: '_id = ?', whereArgs: [gi.getID()]);
@@ -59,37 +59,44 @@ class Databaser {
     }
   }
 
-  Future delete(GroceryItem gi) async {
+  static Future delete(GroceryItem gi) async {
     await inv.delete(INV_DB, where: '_id = ?', whereArgs: [gi.getID()]);
   }
 
-  Future<bool> checkIfExists(String id) async {
+  static Future<bool> checkIfExists(String id) async {
     List<Map> result = await inv.query(INV_DB, where: '_id == ?', whereArgs: [id]);
     return result.length == 1;
   }
 
-  Future<List<Map>> getAll() async {
+  static Future<List<Map>> getAll() async {
     await initDB();
     List<Map> maps = await inv.query(INV_DB);
     return maps;
   }
 
-  Future updatePurchase(int dollars, int cents, DateTime date) async {
+  static Future updatePurchase(PurchaseRecord pr) async {
 
   }
 
-  Future insertPurchase(int dollars, int cents, DateTime date) async {
-
+  static Future insertPurchase(PurchaseRecord pr) async {
+    print("INSERTING PR INTO DATABASE...");
+    try {
+      await inv.insert(COST_DB, pr.toMap());
+    } catch (e) {
+      print(e.toString());
+    }
   }
 
-  Future deletePurchase() async {
-
+  static Future deletePurchase(int id) async {
+    await inv.delete(COST_DB, where: '_id = ?', whereArgs: [id]);
   }
 
-  static Future getAllPurchases() async {
+  static Future<List<PurchaseRecord>> getAllPurchases() async {
     await Databaser.initDB();
     List<Map> maps = await inv.query(COST_DB);
-    return maps;
+    List<PurchaseRecord> records = maps.map((m) => PurchaseRecord.fromMap(m)).toList();
+    return records;
+
   }
 
 } // Databaser

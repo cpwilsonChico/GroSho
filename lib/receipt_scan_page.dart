@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'classes.dart';
+import 'storage.dart';
+import 'receipt_parser.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
@@ -80,6 +82,7 @@ class ImageState extends State<ReceiptScanPage> {
   }
 
   void takePhoto(BuildContext context) async {
+    Databaser.insertPurchase(PurchaseRecord.withDateTime(45, 12, DateTime.now()));
     try {
       await _initCamController;
       final path = join(
@@ -106,11 +109,22 @@ class ImageState extends State<ReceiptScanPage> {
     FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(img);
     TextRecognizer tr = FirebaseVision.instance.textRecognizer();
     VisionText vt = await tr.processImage(visionImage);
+
+    List<List<String>> ocrData = new List<List<String>>();
+    int i = 0;
     for (TextBlock block in vt.blocks) {
+      ocrData.add(new List<String>());
+      int j = 0;
       for (TextLine line in block.lines) {
-        print(line.text);
+        print("($i,$j) ${line.text}");
+        j++;
+        ocrData[i].add(line.text);
       }
+      i++;
     }
+    ReceiptParser rcp = new ReceiptParser(ocrData);
+    PurchaseRecord pr = rcp.parse();
+    if (pr != null) Databaser.insertPurchase(pr);
     Navigator.push(context, MaterialPageRoute(builder: (context) {
       return Scaffold(
         body: Text(vt.text),

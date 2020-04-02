@@ -33,15 +33,14 @@ class BudgetState extends State<BudgetPage> {
   }
 
   void loadFromDB() async {
-    List<Map> maps = await Databaser.getAllPurchases();
-    print("all purchases: ");
-    print(maps);
-    purchases.add(PurchaseRecord(23, 14, "2020", "03", "06", "14:06:22"));
+    purchases = await Databaser.getAllPurchases();
+    /*purchases.add(PurchaseRecord(23, 14, "2020", "03", "06", "14:06:22"));
     purchases.add(PurchaseRecord(6, 78, "2020", "03", "08", "15:08:21"));
     purchases.add(PurchaseRecord(9, 78, "2020", "03", "18", "15:08:21"));
     purchases.add(PurchaseRecord(150, 78, "2020", "03", "01", "15:08:21"));
-    purchases.add(PurchaseRecord(76, 78, "2020", "02", "26", "15:08:21"));
+    purchases.add(PurchaseRecord(76, 78, "2020", "02", "26", "15:08:21"));*/
     purchases.sort(purchaseCompare);
+    print(purchases[0].getID());
     setState((){});
   }
 
@@ -90,8 +89,7 @@ class BudgetState extends State<BudgetPage> {
       )
     );
 
-    return ListView(
-      shrinkWrap: true,
+    return Column(
       children: <Widget>[
         chartWidget,
         PurchaseHistory(purchases),
@@ -107,12 +105,15 @@ class PurchaseHistory extends StatelessWidget {
   PurchaseHistory(this._purchases);
 
   Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: _purchases.length,
-      itemBuilder: (context, index) {
-        return PurchaseWidget(_purchases[index]);
-      }
+    return Expanded(
+      child: ListView.builder(
+          shrinkWrap: true,
+          scrollDirection: Axis.vertical,
+          itemCount: _purchases.length,
+          itemBuilder: (context, index) {
+            return PurchaseWidget(_purchases[index]);
+          }
+      )
     );
   }
 }
@@ -127,22 +128,24 @@ class PurchaseWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.all(8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Padding(
-            padding: EdgeInsets.all(10.0),
-            child: Text(_record.getDollarAmount(), style: TextStyle(
-              fontSize: 16,
-            )),
-          ),
-          Padding(
-            padding: EdgeInsets.all(10.0),
-            child: Text(_record.getDateAsString(), style: TextStyle(
-              fontSize: 16,
-            )),
-          ),
-        ]
+      child: ListTile(
+        title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Padding(
+                padding: EdgeInsets.all(10.0),
+                child: Text(_record.getDollarAmount(), style: TextStyle(
+                  fontSize: 16,
+                )),
+              ),
+              Padding(
+                padding: EdgeInsets.all(10.0),
+                child: Text(_record.getDateAsString(), style: TextStyle(
+                  fontSize: 16,
+                )),
+              ),
+            ]
+        )
       )
     );
   }

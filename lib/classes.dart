@@ -89,8 +89,40 @@ class PurchaseRecord {
       _cents %= 100;
     }
 
-    _date = DateTime.parse(_year + "-" + _month + "-" + _day + " " + _clockTime);
+    _date = DateTime.parse(getDateAsString());
   }
+  PurchaseRecord.withDateTime(this._dollars, this._cents, this._date) {
+    if (_cents >= 100) {
+      _dollars += _cents ~/ 100;
+      _cents %= 100;
+    }
+
+    // manually convert int representation of time to string
+    _year = _date.year.toString();
+    _month = _date.month.toString();
+    if (_date.month < 10) _month = "0" + _month;
+    _day = _date.day.toString();
+    if (_date.day < 10) _day = "0" + _day;
+    int hr = _date.hour;
+    if (hr < 10) {
+      _clockTime = "0" + hr.toString();
+    } else {
+      _clockTime = hr.toString();
+    }
+    int minute = _date.minute;
+    if (minute < 10) {
+      _clockTime += ":0" + minute.toString();
+    } else {
+      _clockTime += ":" + minute.toString();
+    }
+    int second = _date.second;
+    if (second < 10) {
+      _clockTime += ":0" + second.toString();
+    } else {
+      _clockTime += ":" + second.toString();
+    }
+  }
+
   int _dollars;
   int _cents;
   String _year;
@@ -124,6 +156,12 @@ class PurchaseRecord {
     _day = map["_day"];
     _clockTime = map["_clockTime"];
     _id = map["_id"];
+    try {
+      _date = DateTime.parse(getDateAsString());
+    } catch (e) {
+      print(e.toString());
+      _date = DateTime.now();
+    }
   }
 
   String getDateAsString() {
@@ -131,7 +169,9 @@ class PurchaseRecord {
   }
 
   String getDollarAmount() {
-    return "\$ " + _dollars.toString() + "." + _cents.toString();
+    String centsString = _cents.toString();
+    if (_cents < 10) centsString = "0" + centsString;
+    return "\$ " + _dollars.toString() + "." + centsString;
   }
 
   double getDollarValue() {
@@ -144,6 +184,10 @@ class PurchaseRecord {
 
   DateTime getDate() {
     return _date;
+  }
+
+  int getID() {
+    return _id;
   }
 
 }

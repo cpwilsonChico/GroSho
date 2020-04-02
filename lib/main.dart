@@ -5,7 +5,6 @@ import 'dart:collection';
 import 'package:camera/camera.dart';
 import 'storage.dart';
 import 'budget_page.dart';
-import 'package:edit_distance/edit_distance.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,19 +34,17 @@ class HomePage extends StatefulWidget {
   final Databaser db;
 
   @override
-  InventoryState createState() => InventoryState(db);
+  InventoryState createState() => InventoryState();
 }
 
 class InventoryState extends State<HomePage> {
-
-  Databaser db;
 
   List<GroceryItem> inventoryList;
   HashMap<String, int> quantityMap;
   QuantityType curQuan;
   String curQuanString;
 
-  InventoryState(this.db) {
+  InventoryState() {
     // list of all foods in inventory
     inventoryList = new List<GroceryItem>();
     // map of food names to index in list
@@ -63,7 +60,7 @@ class InventoryState extends State<HomePage> {
   }
 
   void loadFromDB() async {
-    List<Map> maps = await db.getAll();
+    List<Map> maps = await Databaser.getAll();
     for (Map m in maps) {
       addItem(GroceryItem.fromMap(m));
     }
@@ -154,7 +151,7 @@ class InventoryState extends State<HomePage> {
         inventoryList.add(item);
       }
 
-      db.insert(item);
+      Databaser.insert(item);
     });
   }
 
@@ -162,12 +159,12 @@ class InventoryState extends State<HomePage> {
     inventoryList[index].q = q;
     inventoryList[index].amount = amount;
     setState(()=>{});
-    db.update(inventoryList[index]);
+    Databaser.update(inventoryList[index]);
   }
 
   void deleteItem(int index) {
     quantityMap.remove(inventoryList[index].getID());
-    db.delete(inventoryList[index]);
+    Databaser.delete(inventoryList[index]);
     inventoryList.removeAt(index);
     setState(()=>{});
   }
