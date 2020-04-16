@@ -33,13 +33,12 @@ class ReceiptState extends State<ReceiptFinalizer> {
       TextRecognizer tr = FirebaseVision.instance.textRecognizer();
       VisionText vt = await tr.processImage(visionImage);
 
-      List<List<String>> ocrData = new List<List<String>>();
       int i = 0;
       for (TextBlock block in vt.blocks) {
         ocrData.add(new List<String>());
         int j = 0;
         for (TextLine line in block.lines) {
-          print("($i,$j) ${line.text}");
+          //print("($i,$j) ${line.text}");
           j++;
           ocrData[i].add(line.text);
         }
@@ -57,24 +56,96 @@ class ReceiptState extends State<ReceiptFinalizer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text("GroSho"),
+      ),
       body: FutureBuilder(
         future: _visionFunction,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             if (receipt.pr == null) {
-              return Text("Failed to parse receipt. Try again.");
+              return Center(
+                child: Text("Failed to parse receipt. Try again."),
+              );
             } else {
-              return Text(receipt.pr.getDateAsString());
+              return ReceiptStager(receipt);
             }
           } else {
-            return SizedBox(
-              height: 60,
-              width: 60,
-              child: CircularProgressIndicator(),
+            return Center(
+              child: SizedBox(
+                height: 60,
+                width: 60,
+                child: CircularProgressIndicator(),
+              ),
             );
           }
         }
       )
+    );
+  }
+}
+
+class ReceiptStager extends StatefulWidget {
+  final ReceiptType _receipt;
+  ReceiptStager(this._receipt);
+  State<ReceiptStager> createState() => StagerState(_receipt);
+}
+
+class StagerState extends State<ReceiptStager> {
+  ReceiptType _receipt;
+  StagerState(this._receipt);
+
+  Widget build(BuildContext context) {
+    return Container(
+      width: MediaQuery.of(context).size.width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Container(
+            padding: EdgeInsets.all(6.0),
+            decoration: BoxDecoration(
+              color: Color.fromARGB(0xFF, 0x80, 0x80, 0x80),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Text("Date: ${_receipt.pr.getDateAsString()}"),
+                Text("Total: ${_receipt.pr.getDollarAmount()}"),
+              ]
+            )
+          ),
+
+          Container(
+            padding: EdgeInsets.all(6.0),
+            child: (_receipt.list.length == 0)
+            ? Center(
+                  child: Text("Failed to find any grocery items in your receipt."),
+                )
+            : ListView.builder(
+              shrinkWrap: true,
+              itemCount: _receipt.list.length,
+              itemBuilder: (context, index) {
+                return ItemStager(_receipt.list[index]);
+              }
+            )
+          ),
+        ]
+      )
+    );
+  }
+}
+
+class ItemStager extends StatelessWidget {
+  final GroceryItem _item;
+  ItemStager(this._item);
+
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        title: Text(_item.name),
+        subtitle: Text(_item.id),
+      ),
     );
   }
 }

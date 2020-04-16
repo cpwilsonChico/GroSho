@@ -4,11 +4,11 @@ import 'classes.dart';
 
 class ReceiptParser {
   ReceiptParser(this._ocr) {
-    itemsFound = new List<String>();
+    namesFound = new List<String>();
   }
 
   List<List<String>> _ocr;
-  List<String> itemsFound;
+  List<String> namesFound;
   Levenshtein lev = new Levenshtein();
 
   //String tta = "";  // TOTAL TRANSACTION AMOUNT: $xx.xx
@@ -23,6 +23,7 @@ class ReceiptParser {
 
 
   Future<ReceiptType> parse() async {
+    print(_ocr.length);
     ReceiptType nullRec = ReceiptType.empty();
     for (int i = 0; i < _ocr.length; i++) {
       List<String> block = _ocr[i];
@@ -69,8 +70,13 @@ class ReceiptParser {
 
     DateTime receiptDate = DateTime.parse(dateString);
 
+    List<GroceryItem> itemsFound = new List<GroceryItem>();
+    for (String name in namesFound) {
+      itemsFound.add(GroceryItem(QuantityType.gallons, name, name, 1));
+    }
+
     PurchaseRecord recPr = PurchaseRecord.withDateTime(dollars, cents, receiptDate);
-    ReceiptType rec = new ReceiptType(recPr, null);
+    ReceiptType rec = new ReceiptType(recPr, itemsFound);
     return rec;
 
   }
@@ -91,7 +97,8 @@ class ReceiptParser {
 
   void tryParseItem(String line) {
     if (lev.distance("HOMOGZD MILK", line) <= 1) {
-      itemsFound.add("HOMOGZD MILK");
+      namesFound.add("HOMOGZD MILK");
+      print("MILK FOUND");
     }
   }
 
