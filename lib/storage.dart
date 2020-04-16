@@ -79,6 +79,7 @@ class Databaser {
   }
 
   static Future insertPurchase(PurchaseRecord pr) async {
+    if (pr == null) return;
     print("INSERTING PR INTO DATABASE...");
     try {
       await inv.insert(COST_DB, pr.toMap());

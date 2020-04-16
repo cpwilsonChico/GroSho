@@ -191,3 +191,14 @@ class PurchaseRecord {
   }
 
 }
+
+class ReceiptType {
+  PurchaseRecord pr;
+  List<GroceryItem> list;
+
+  ReceiptType(this.pr, this.list);
+  ReceiptType.empty() {
+    pr = null;
+    list = null;
+  }
+}

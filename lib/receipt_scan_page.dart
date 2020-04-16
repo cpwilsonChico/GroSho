@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'classes.dart';
 import 'storage.dart';
+import 'receipt_builder.dart';
 import 'receipt_parser.dart';
-import 'dart:io';
+import 'receipt_finalizer.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:path/path.dart';
-import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 
 /*class ReceiptScanPage extends StatelessWidget {
 
@@ -36,10 +36,12 @@ class ImageState extends State<ReceiptScanPage> {
 
   CameraController _camController;
   Future<void> _initCamController;
+  List<String> imgPaths;
 
   @override
   void initState() {
     super.initState();
+    imgPaths = new List<String>();
     _camController = CameraController(
       widget.mainCam,
       ResolutionPreset.high,
@@ -75,6 +77,7 @@ class ImageState extends State<ReceiptScanPage> {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.camera_alt),
         onPressed: () => takePhoto(context),
+
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
@@ -82,7 +85,6 @@ class ImageState extends State<ReceiptScanPage> {
   }
 
   void takePhoto(BuildContext context) async {
-    Databaser.insertPurchase(PurchaseRecord.withDateTime(45, 12, DateTime.now()));
     try {
       await _initCamController;
       final path = join(
@@ -90,7 +92,9 @@ class ImageState extends State<ReceiptScanPage> {
         '${DateTime.now()}.png',
       );
       await _camController.takePicture(path);
-      doVision(path, context);
+      imgPaths.add(path);
+      popupConfirm(path, context);
+      //doVision(path, context);
       /*
       Navigator.push(
         context,
@@ -104,41 +108,32 @@ class ImageState extends State<ReceiptScanPage> {
     }
   }
 
-  doVision(String path, BuildContext context) async {
-    File img = File(path);
-    FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(img);
-    TextRecognizer tr = FirebaseVision.instance.textRecognizer();
-    VisionText vt = await tr.processImage(visionImage);
+  clickMore(BuildContext context) {
+    Navigator.pop(context);
+  }
 
-    List<List<String>> ocrData = new List<List<String>>();
-    int i = 0;
-    for (TextBlock block in vt.blocks) {
-      ocrData.add(new List<String>());
-      int j = 0;
-      for (TextLine line in block.lines) {
-        print("($i,$j) ${line.text}");
-        j++;
-        ocrData[i].add(line.text);
-      }
-      i++;
-    }
-    ReceiptParser rcp = new ReceiptParser(ocrData);
+  clickDone(BuildContext context) {
+    Navigator.pop(context);
+    Navigator.push(context, MaterialPageRoute(builder:
+    (context) => ReceiptFinalizer(imgPaths)));
+  }
+
+  popupConfirm(String path, BuildContext context) {
+
+    Navigator.push(context, MaterialPageRoute(builder:
+        (context) => ReceiptBuilderFrame(imgPaths, clickMore, clickDone)
+    ));
+  }
+
+
+
+    /*ReceiptParser rcp = new ReceiptParser(ocrData);
     PurchaseRecord pr = rcp.parse();
-    if (pr != null) Databaser.insertPurchase(pr);
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return Scaffold(
-        body: Text(vt.text),
-      );
-    }));
-  }
+
+    if (pr != null) {
+      Databaser.insertPurchase(pr);
+    }
+    imgPaths.clear();
+  }*/
 }
 
-class DisplayPictureScreen extends StatelessWidget {
-  final String imagePath;
-  const DisplayPictureScreen({Key key, this.imagePath}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.file(File(imagePath));
-  }
-}

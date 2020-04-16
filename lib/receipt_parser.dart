@@ -3,9 +3,12 @@ import 'dart:core';
 import 'classes.dart';
 
 class ReceiptParser {
-  ReceiptParser(this._ocr);
+  ReceiptParser(this._ocr) {
+    itemsFound = new List<String>();
+  }
 
   List<List<String>> _ocr;
+  List<String> itemsFound;
   Levenshtein lev = new Levenshtein();
 
   //String tta = "";  // TOTAL TRANSACTION AMOUNT: $xx.xx
@@ -19,7 +22,8 @@ class ReceiptParser {
 
 
 
-  PurchaseRecord parse() {
+  Future<ReceiptType> parse() async {
+    ReceiptType nullRec = ReceiptType.empty();
     for (int i = 0; i < _ocr.length; i++) {
       List<String> block = _ocr[i];
       for (int j = 0; j < block.length; j++) {
@@ -28,6 +32,7 @@ class ReceiptParser {
         tryParseTransactionAmount(line, i);
         tryParseBalance(line, i);
         tryParseDate(line, i);
+        tryParseItem(line);
         //tryParseDebit(line, i);
         //tryParseChange(line, i);
         //tryParseCBA(line, i);
@@ -36,12 +41,12 @@ class ReceiptParser {
 
     if (dollarString == "") {
       print("Could not determine total cost from receipt image.");
-      return null;
+      return nullRec;
     } else {
       double dollarValue = double.tryParse(dollarString);
       if (dollarValue == null) {
         print("Could not determine total cost from receipt image");
-        return null;
+        return nullRec;
       } else {
         dollars = dollarValue.truncate();
         try {
@@ -64,7 +69,9 @@ class ReceiptParser {
 
     DateTime receiptDate = DateTime.parse(dateString);
 
-    return new PurchaseRecord.withDateTime(dollars, cents, receiptDate);
+    PurchaseRecord recPr = PurchaseRecord.withDateTime(dollars, cents, receiptDate);
+    ReceiptType rec = new ReceiptType(recPr, null);
+    return rec;
 
   }
 
@@ -80,6 +87,12 @@ class ReceiptParser {
     }
 
     return true;
+  }
+
+  void tryParseItem(String line) {
+    if (lev.distance("HOMOGZD MILK", line) <= 1) {
+      itemsFound.add("HOMOGZD MILK");
+    }
   }
 
   void tryParseDate(String line, int index) {
