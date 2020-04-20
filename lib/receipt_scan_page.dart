@@ -115,13 +115,22 @@ class ImageState extends State<ReceiptScanPage> {
   clickDone(BuildContext context) {
     Navigator.pop(context);
     Navigator.push(context, MaterialPageRoute(builder:
-    (context) => ReceiptFinalizer(imgPaths)));
+    (context) => ReceiptFinalizer(imgPaths, clearData)));
+  }
+
+  clickCancel(BuildContext context) {
+    imgPaths.clear();
+    Navigator.pop(context);
+  }
+
+  clearData() {
+    imgPaths.clear();
   }
 
   popupConfirm(String path, BuildContext context) {
 
     Navigator.push(context, MaterialPageRoute(builder:
-        (context) => ReceiptBuilderFrame(imgPaths, clickMore, clickDone)
+        (context) => ReceiptBuilderFrame(imgPaths, clickMore, clickDone, clickCancel)
     ));
   }
 

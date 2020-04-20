@@ -7,17 +7,19 @@ class ReceiptBuilderFrame extends StatelessWidget {
   final List<String> _imgPaths;
   final Function _clickMore;
   final Function _clickDone;
+  final Function _clickCancel;
 
-  ReceiptBuilderFrame(this._imgPaths, this._clickMore, this._clickDone);
+  ReceiptBuilderFrame(this._imgPaths, this._clickMore, this._clickDone, this._clickCancel);
 
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black45,
       body: Column(
         children: <Widget>[
+          SizedBox(height: 20),
           ReceiptRecentImage(_imgPaths[_imgPaths.length-1]),
           ReceiptBuilderImageList(this._imgPaths),
-          ReceiptBuilderButtons(this._clickMore, this._clickDone),
+          ReceiptBuilderButtons(this._clickMore, this._clickDone, this._clickCancel),
         ]
       ),
     );
@@ -80,13 +82,14 @@ class ReceiptRecentImage extends StatelessWidget {
 class ReceiptBuilderButtons extends StatelessWidget {
   final Function _clickMore;
   final Function _clickDone;
+  final Function _clickCancel;
 
-  ReceiptBuilderButtons(this._clickMore, this._clickDone);
+  ReceiptBuilderButtons(this._clickMore, this._clickDone, this._clickCancel);
 
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white30,
+        color: Color.fromARGB(0xFF, 0x40, 0x40, 0x40),
       ),
       margin: EdgeInsets.all(32.0),
       child: Center(
@@ -94,8 +97,9 @@ class ReceiptBuilderButtons extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            ReceiptBuilderButton("Add More", _clickMore),
-            ReceiptBuilderButton("Done", _clickDone),
+            ReceiptBuilderButton(Icons.cancel, _clickCancel),
+            ReceiptBuilderButton(Icons.add_a_photo, _clickMore),
+            ReceiptBuilderButton(Icons.check, _clickDone),
           ]
         )
       )
@@ -104,19 +108,21 @@ class ReceiptBuilderButtons extends StatelessWidget {
 }
 
 class ReceiptBuilderButton extends StatelessWidget {
-  final String _displayText;
+  //final String _displayText;
+  final IconData _icon;
   final Function _callback;
 
-  ReceiptBuilderButton(this._displayText, this._callback);
+  ReceiptBuilderButton(this._icon, this._callback);
 
   Widget build(BuildContext context) {
     return Container(
+      width: MediaQuery.of(context).size.width / 4,
       padding: EdgeInsets.all(12),
-      child: FlatButton(
-        padding: EdgeInsets.all(8),
+      child: RaisedButton(
         onPressed: () => _callback(context),
-        child: Text(_displayText, style: TextStyle(color: Colors.white)),
-        color: Colors.white30,
+        child: Icon(_icon),
+        //child: Text(_displayText, style: TextStyle(color: Colors.white)),
+        color: Color.fromARGB(0xFF, 0x85, 0x85, 0x85),
       )
     );
 

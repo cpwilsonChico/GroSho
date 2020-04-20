@@ -7,17 +7,19 @@ import 'receipt_parser.dart';
 
 class ReceiptFinalizer extends StatefulWidget {
   final List<String> _imgPaths;
-  ReceiptFinalizer(this._imgPaths);
+  final Function _clearData;
+  ReceiptFinalizer(this._imgPaths, this._clearData);
 
-  State<ReceiptFinalizer> createState() => ReceiptState(_imgPaths);
+  State<ReceiptFinalizer> createState() => ReceiptState(_imgPaths, _clearData);
 }
 
 class ReceiptState extends State<ReceiptFinalizer> {
   Future _visionFunction;
+  Function _clearData;
   List<String> _imgPaths;
   ReceiptType receipt;
 
-  ReceiptState(this._imgPaths);
+  ReceiptState(this._imgPaths, this._clearData);
 
   @override
   initState() {
@@ -63,6 +65,7 @@ class ReceiptState extends State<ReceiptFinalizer> {
         future: _visionFunction,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
+            _clearData();
             if (receipt.pr == null) {
               return Center(
                 child: Text("Failed to parse receipt. Try again."),
