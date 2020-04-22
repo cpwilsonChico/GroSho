@@ -1,14 +1,21 @@
 import 'package:edit_distance/edit_distance.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:core';
 import 'classes.dart';
 
 class ReceiptParser {
+  static const MAX_ITEM_LEN = 50;
   ReceiptParser(this._ocr) {
-    namesFound = new List<String>();
+    itemsFound = new List<GroceryItem>();
+    queues = new List<List<String>>();
+    for (int i = 0; i < MAX_ITEM_LEN; i++) {
+      queues.add(new List<String>());
+    }
   }
 
   List<List<String>> _ocr;
-  List<String> namesFound;
+  List<List<String>> queues;
+  List<GroceryItem> itemsFound;
   Levenshtein lev = new Levenshtein();
 
   //String tta = "";  // TOTAL TRANSACTION AMOUNT: $xx.xx
@@ -23,9 +30,10 @@ class ReceiptParser {
 
 
   Future<ReceiptType> parse() async {
-    print(_ocr.length);
+    print("ocr length: ${_ocr.length}");
     ReceiptType nullRec = ReceiptType.empty();
     for (int i = 0; i < _ocr.length; i++) {
+      print("i: $i");
       List<String> block = _ocr[i];
       for (int j = 0; j < block.length; j++) {
         String line = block[j];
@@ -33,12 +41,14 @@ class ReceiptParser {
         tryParseTransactionAmount(line, i);
         tryParseBalance(line, i);
         tryParseDate(line, i);
-        tryParseItem(line);
+        addToList(line);
         //tryParseDebit(line, i);
         //tryParseChange(line, i);
         //tryParseCBA(line, i);
       }
     }
+
+    print("AAA");
 
     if (dollarString == "") {
       print("Could not determine total cost from receipt image.");
@@ -60,6 +70,10 @@ class ReceiptParser {
       }
     }
 
+    print("PRE PROCESS ITEMS");
+    await processItems();
+    print("POST PROCESS ITEMS");
+
     String centsString = cents.toString();
     if (cents < 10) centsString = "0" + centsString;
     print("I think the receipt totalled \$$dollars.$centsString");
@@ -70,15 +84,55 @@ class ReceiptParser {
 
     DateTime receiptDate = DateTime.parse(dateString);
 
-    List<GroceryItem> itemsFound = new List<GroceryItem>();
-    for (String name in namesFound) {
-      itemsFound.add(GroceryItem(QuantityType.gallons, name, name, 1));
-    }
-
     PurchaseRecord recPr = PurchaseRecord.withDateTime(dollars, cents, receiptDate);
-    ReceiptType rec = new ReceiptType(recPr, itemsFound);
+    ReceiptType rec = new ReceiptType(recPr, itemsFound, null);
+    print("end of PARSE");
     return rec;
 
+  }
+
+  // processes each queued grocery code by checking against firebase
+  Future processItems() async {
+    print("BEGIN processItems()");
+    // add all non-empty queues to the stream list
+    for (int i = 0; i < queues.length; i++) {
+      if (queues[i].isEmpty) continue;
+      CollectionReference colref = Firestore.instance.collection("items$i");
+      if (CollectionReference == null) continue;
+      QuerySnapshot snap = await colref.getDocuments();
+      print("POST SNAP");
+      for (DocumentSnapshot doc in snap.documents) {
+        String fromDB = doc.data["id"];
+        for (int j = 0; j < queues[i].length; j++) {
+          String candidate = queues[i][j];
+          if (lev.distance(fromDB, candidate) < 2) {
+            print("Found match: $candidate => $fromDB");
+            itemsFound.add(new GroceryItem(QuantityType.gallons, fromDB, doc.data["name"], 1));
+            queues[i].removeAt(j);
+          }
+        }
+      }
+    }
+
+    print("END OF processItems()");
+
+  }
+
+  void processItem(QuerySnapshot qs) {
+    List<DocumentSnapshot> dsList = qs.documents;
+    for (DocumentSnapshot ds in dsList) {
+      Map<String, dynamic> dataFromDB = ds.data;
+      print("Data from db: $dataFromDB");
+    }
+  }
+
+  void addToList(String line) {
+    line = line.trim();
+    line = line.replaceAll(" ", "_");
+    line = line.toUpperCase();
+    if (line.contains("CRV")) return;
+    queues[line.length].add(line);
+    print("length: ${line.length}");
   }
 
   bool convertDateFormat() {
@@ -95,11 +149,26 @@ class ReceiptParser {
     return true;
   }
 
+  void parseItems(String line) {
+
+  }
+
   void tryParseItem(String line) {
-    if (lev.distance("HOMOGZD MILK", line) <= 1) {
-      namesFound.add("HOMOGZD MILK");
-      print("MILK FOUND");
-    }
+    line = line.trim();
+    line = line.replaceAll(" ", "_");
+    int strLen = line.length;
+    String collecName = "items" + strLen.toString();
+
+    Stream<QuerySnapshot> stream = Firestore.instance.collection(collecName).snapshots();
+    stream.listen(
+        (data) {
+          print("data: $data");
+          //if (lev.distance(line, data))
+        },
+        onDone: () {
+          print("Data stream complete.");
+        }
+    );
   }
 
   void tryParseDate(String line, int index) {

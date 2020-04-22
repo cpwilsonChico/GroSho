@@ -195,10 +195,12 @@ class PurchaseRecord {
 class ReceiptType {
   PurchaseRecord pr;
   List<GroceryItem> list;
+  List<String> unmatched;
 
-  ReceiptType(this.pr, this.list);
+  ReceiptType(this.pr, this.list, this.unmatched);
   ReceiptType.empty() {
     pr = null;
     list = null;
+    unmatched = null;
   }
 }
