@@ -21,7 +21,7 @@ void main() async {
       ),
       children: <Widget>[
         BudgetPageFrame(),
-        HomePage(db: db),
+        HomePage(),
         ReceiptScanPage(mainCam: firstCamera),
       ]
     )
@@ -29,9 +29,8 @@ void main() async {
 }
 
 class HomePage extends StatefulWidget {
-  HomePage({Key key, this.db}) : super(key: key);
+  HomePage({Key key}) : super(key: key);
 
-  final Databaser db;
 
   @override
   InventoryState createState() => InventoryState();
@@ -150,8 +149,6 @@ class InventoryState extends State<HomePage> {
         quantityMap[item.id] = inventoryList.length;
         inventoryList.add(item);
       }
-
-      Databaser.insert(item);
     });
   }
 

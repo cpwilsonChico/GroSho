@@ -168,6 +168,30 @@ class PurchaseRecord {
     return _year + "-" + _month + "-" + _day + " " + _clockTime;
   }
 
+  String getDateAsFriendlyString() {
+    try {
+      List<String> months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ];
+      String month = months[int.parse(_month) - 1];
+      String day = int.parse(_day).toString(); // get rid of leading zeroes
+      return "$month $day, $_year";
+    } catch (e) {
+      return "Unknown date";
+    }
+  }
+
   String getDollarAmount() {
     String centsString = _cents.toString();
     if (_cents < 10) centsString = "0" + centsString;

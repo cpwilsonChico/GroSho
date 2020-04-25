@@ -13,6 +13,8 @@ class ReceiptParser {
     }
   }
 
+  ReceiptParser.blank();
+
   List<List<String>> _ocr;
   List<List<String>> queues;
   List<GroceryItem> itemsFound;
@@ -26,6 +28,7 @@ class ReceiptParser {
   String dateString = "";
   int dollars = -1;
   int cents = -1;
+
 
 
 
@@ -79,8 +82,8 @@ class ReceiptParser {
     print("I think the receipt totalled \$$dollars.$centsString");
 
     bool goodDate = convertDateFormat();
+    if (!goodDate) return nullRec;
     print("I think the date of this receipt is $dateString");
-    if (!goodDate) return null;
 
     DateTime receiptDate = DateTime.parse(dateString);
 
@@ -129,8 +132,11 @@ class ReceiptParser {
   void addToList(String line) {
     line = line.trim();
     line = line.replaceAll(" ", "_");
+    line = line.replaceAll("/", "-");
     line = line.toUpperCase();
-    if (line.contains("CRV")) return;
+    if (line.contains("CRV")) return; // ignore CRV
+    if (lev.distance(line, "REGULAR_PRICE") < 2) return;  // ignore discounts
+    if (lev.distance(line, "CARD_SAVINGS") < 2) return;   // ignore discounts
     queues[line.length].add(line);
     print("length: ${line.length}");
   }
