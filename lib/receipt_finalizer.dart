@@ -421,7 +421,7 @@ class NewItemMenuState extends State<NewItemMenu> {
     setState((){});
 
     if (insertingIntoDB) {
-      bool success = await Databaser.insertCloudItem(new GroceryItem(QuantityType.gallons, inputID, inputName, 1));
+      bool success = await Databaser.insertCloudItem(new GroceryItem(inputID, inputName, 1));
       waiting = false;
       if (success) {
         Navigator.pop(context);
@@ -449,12 +449,7 @@ class NewItemMenuState extends State<NewItemMenu> {
     int status = await Databaser.checkCodeExactly(inputID);
     if (status == 1) {
       String name = await Databaser.getNameByCode(inputID);
-      GroceryItem gi = new GroceryItem(
-        QuantityType.gallons,
-        inputID,
-        name,
-        1,
-      );
+      GroceryItem gi = new GroceryItem(inputID, name, 1);
       addItem(gi);
       waiting = false;
       Navigator.pop(context);

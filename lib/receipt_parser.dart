@@ -110,7 +110,7 @@ class ReceiptParser {
           String candidate = queues[i][j];
           if (lev.distance(fromDB, candidate) < 2) {
             print("Found match: $candidate => $fromDB");
-            itemsFound.add(new GroceryItem(QuantityType.gallons, fromDB, doc.data["name"], 1));
+            itemsFound.add(new GroceryItem(fromDB, doc.data["name"], 1));
             queues[i].removeAt(j);
           }
         }

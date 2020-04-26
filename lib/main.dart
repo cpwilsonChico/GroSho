@@ -47,15 +47,12 @@ class InventoryState extends State<HomePage> {
 
   List<GroceryItem> inventoryList;
   HashMap<String, int> quantityMap;
-  QuantityType curQuan;
-  String curQuanString;
 
   InventoryState() {
     // list of all foods in inventory
     inventoryList = new List<GroceryItem>();
     // map of food names to index in list
     quantityMap = new HashMap<String, int>();
-    curQuanString = quantityToString(QuantityType.fl_oz);
   }
 
   // on load, read from database
@@ -98,7 +95,6 @@ class InventoryState extends State<HomePage> {
                 onTap: () => promptItem(context, gi: inventoryList[index], giIndex: index),
                 onLongPress: () => promptDelete(context, index),
                 title: Text(inventoryList[index].name),
-                leading: Text(inventoryList[index].getQuantityAsString())
             )
         );
       },
@@ -160,8 +156,7 @@ class InventoryState extends State<HomePage> {
     });
   }
 
-  void updateItem(int index, QuantityType q, double amount) {
-    inventoryList[index].q = q;
+  void updateItem(int index, int amount) {
     inventoryList[index].amount = amount;
     setState(()=>{});
     Databaser.update(inventoryList[index]);
@@ -183,7 +178,7 @@ class PromptDialog extends StatefulWidget {
   // callback function to communicate with parent widget
   // adds a grocery item to the inventory
   final void Function(GroceryItem) addToList;
-  final void Function(int, QuantityType, double) updateList;
+  final void Function(int, int) updateList;
   final GroceryItem editItem;
   final int giIndex;
 
@@ -201,15 +196,11 @@ class PromptDialogState extends State<PromptDialog> {
 
   @override
   PromptDialogState() : super() {
-    selectedString = quantityToString(QuantityType.unknown);
-    selectedQ = QuantityType.unknown;
     isEditing = false;
     editItem = null;
   }
 
   PromptDialogState.edit(GroceryItem gi, int index) {
-    selectedString = quantityToString(gi.q);
-    selectedQ = gi.q;
     item = gi.name;
     amount = gi.amount;
     isEditing = true;
@@ -219,9 +210,8 @@ class PromptDialogState extends State<PromptDialog> {
 
   GroceryItem editItem;
   String selectedString;
-  QuantityType selectedQ;
   String item;
-  double amount;
+  int amount;
   bool isEditing;
   int giIndex;
 
@@ -263,7 +253,7 @@ class PromptDialogState extends State<PromptDialog> {
                 child: TextFormField(
                     onChanged: (String input) {
                       setState( () {
-                        amount = double.parse(input);
+                        amount = int.parse(input);
                       });
                     },
                     initialValue: (amount==null) ? '' : amount.toStringAsFixed(2),
@@ -274,30 +264,15 @@ class PromptDialogState extends State<PromptDialog> {
                     )
                 ),
               ),
-              DropdownButton<String>(
-                items: QuantityType.values.map<DropdownMenuItem<String>>((QuantityType qt) {
-                  return DropdownMenuItem<String>(
-                    value: quantityToString(qt),
-                    child: Text(quantityToString(qt)),
-                  );
-                }).toList(),
-                onChanged: (String newValue) {
-                  setState(() {
-                    selectedString = newValue;
-                    selectedQ = strToQuantity[newValue];
-                  });
-                },
-                value: selectedString,
-              ),
             ]
         ),
         SizedBox(height: 10),
         RaisedButton(
           onPressed: () {
             if (isEditing) {
-              widget.updateList(giIndex, selectedQ, amount);
+              widget.updateList(giIndex, amount);
             } else {
-              GroceryItem gi = new GroceryItem(selectedQ, item, item, amount);
+              GroceryItem gi = new GroceryItem(item, item, amount);
               widget.addToList(gi);
             }
             Navigator.pop(context);

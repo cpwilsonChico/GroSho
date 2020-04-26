@@ -55,7 +55,7 @@ class Databaser {
   static Future insert(GroceryItem gi) async {
     print("INSERTING ${gi.getID()}");
     if (await checkIfExists(gi.getID())) {
-      double curAmount = (await get(gi.getID()))["_amount"];
+      int curAmount = (await get(gi.getID()))["_amount"];
       gi.amount += curAmount;
       print("amount: ${gi.amount}");
       await inv.update(INV_DB, gi.toMap(),

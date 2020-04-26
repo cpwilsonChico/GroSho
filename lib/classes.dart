@@ -1,5 +1,5 @@
 import 'dart:collection';
-
+/*
 enum QuantityType {
   cups,
   cans,
@@ -41,40 +41,40 @@ String quantityToString(QuantityType q) {
       return '';
   }
 
-}
+}*/
 
 class GroceryItem {
-  QuantityType q;
+  //QuantityType q;
   String id;
   String name;
-  double amount;
+  int amount;
   // image
 
   // syntactic sugar for init list
-  GroceryItem(this.q, this.id, this.name, this.amount);
+  GroceryItem(this.id, this.name, this.amount);
 
   GroceryItem.fromMap(Map<String, dynamic> map) {
     id = map['_id'];
     name = map['_name'];
     amount = map['_amount'];
-    q = QuantityType.values[map['_type']];
+    //q = QuantityType.values[map['_type']];
 
   }
 
   String getID() {
     return id;
   }
-
+/*
   String getQuantityAsString() {
     if (amount == null) return '';
     return amount.toStringAsFixed(2) + ' ' + ((q==QuantityType.unknown) ? '' : quantityToString(q));
   }
-
+*/
   Map<String, dynamic> toMap() {
     var tempMap = <String, dynamic>{
       "_id": id,
       "_name": name,
-      "_type": q.index,
+      //"_type": q.index,
       "_amount": amount,
     };
     return tempMap;
