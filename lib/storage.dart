@@ -57,6 +57,7 @@ class Databaser {
     if (await checkIfExists(gi.getID())) {
       double curAmount = (await get(gi.getID()))["_amount"];
       gi.amount += curAmount;
+      print("amount: ${gi.amount}");
       await inv.update(INV_DB, gi.toMap(),
         where: '_id = ?', whereArgs: [gi.getID()]);
     } else {

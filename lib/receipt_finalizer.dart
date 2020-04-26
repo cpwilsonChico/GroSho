@@ -20,6 +20,7 @@ class ReceiptState extends State<ReceiptFinalizer> {
   Function _clearData;
   List<String> _imgPaths;
   ReceiptType receipt;
+  BuildContext myContext;
 
   ReceiptState(this._imgPaths, this._clearData);
 
@@ -59,6 +60,8 @@ class ReceiptState extends State<ReceiptFinalizer> {
 
   @override
   Widget build(BuildContext context) {
+    print("setting context");
+    setState( () => this.myContext = context);
     return Scaffold(
       appBar: AppBar(
         title: Text("Confirm Your Receipt"),
@@ -128,14 +131,15 @@ class ReceiptState extends State<ReceiptFinalizer> {
     );
   }
 
-  void submitReceipt() {
-    Databaser.insertPurchase(receipt.pr);
+  Future<void> submitReceipt() async {
+    await Databaser.insertPurchase(receipt.pr);
     for (GroceryItem gi in receipt.list) {
-      Databaser.insert(gi);
+      await Databaser.insert(gi);
     }
-    Navigator.push(context, MaterialPageRoute(builder: (context) {
-      return HomePage();
-    }));
+    // pop to home page
+    //Navigator.of(myContext).popUntil( (route) => route.settings.name == "/");
+    Navigator.pushNamedAndRemoveUntil(context, "/", (route) => false);
+    //Navigator.pushNamed(context, "/");
   }
 
   Future<bool> showCancelDialog() async {
@@ -171,9 +175,10 @@ class ReceiptState extends State<ReceiptFinalizer> {
         ));
         break;
       case 2:
+        if (receipt.pr == null) return;
         if (await showDoneDialog()) {
-          submitReceipt();
-          Navigator.pop(context);
+          //Navigator.pop(context);
+          await submitReceipt();
         }
     }
   }

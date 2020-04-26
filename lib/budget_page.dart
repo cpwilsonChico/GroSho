@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'classes.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'storage.dart';
+import 'nav_drawer.dart';
 
 
 class BudgetPageFrame extends StatelessWidget {
 
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: NavDrawer(),
       appBar: AppBar(
         title: Text("Purchase History"),
       ),

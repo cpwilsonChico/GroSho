@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'classes.dart';
-import 'storage.dart';
+import 'nav_drawer.dart';
 import 'receipt_builder.dart';
-import 'receipt_parser.dart';
 import 'receipt_finalizer.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:path/path.dart';
 
@@ -64,6 +61,7 @@ class ImageState extends State<ReceiptScanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: NavDrawer(),
       body: FutureBuilder<void>(
         future: _initCamController,
         builder: (context, snapshot) {

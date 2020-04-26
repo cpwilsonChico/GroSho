@@ -4,6 +4,7 @@ import 'receipt_scan_page.dart';
 import 'dart:collection';
 import 'package:camera/camera.dart';
 import 'storage.dart';
+import 'nav_drawer.dart';
 import 'budget_page.dart';
 
 void main() async {
@@ -11,10 +12,16 @@ void main() async {
   final cameras = await availableCameras();
   final firstCamera = cameras.first;
 
-  Databaser db = new Databaser();
+  new Databaser();
 
   runApp(MaterialApp(
     theme: ThemeData.dark(),
+    initialRoute: "/",
+    routes: {
+      "/": (context) => HomePage(),
+      "/scanner": (context) => ReceiptScanPage(mainCam: firstCamera),
+      "/budget": (context) => BudgetPageFrame(),
+    },/*
     home: PageView(
       controller: PageController(
         initialPage: 1,
@@ -24,7 +31,7 @@ void main() async {
         HomePage(),
         ReceiptScanPage(mainCam: firstCamera),
       ]
-    )
+    )*/
   ));
 }
 
@@ -68,6 +75,7 @@ class InventoryState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: NavDrawer(),
       appBar: AppBar(
         title: Text("GroSho")
       ),
