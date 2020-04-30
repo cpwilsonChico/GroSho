@@ -1,34 +1,42 @@
 {
   "project_info": {
-    "project_number": "624561503492",
-    "firebase_url": "https://grosho-3c1f6.firebaseio.com",
-    "project_id": "grosho-3c1f6",
-    "storage_bucket": "grosho-3c1f6.appspot.com"
+    "project_number": "916844608462",
+    "firebase_url": "https://tcgenius-10ec7.firebaseio.com",
+    "project_id": "tcgenius-10ec7",
+    "storage_bucket": "tcgenius-10ec7.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:624561503492:android:c1ea8aafc2656991136451",
+        "mobilesdk_app_id": "1:916844608462:android:9d76677279ca9420c1c99f",
         "android_client_info": {
-          "package_name": "csuchico.gro_sho"
+          "package_name": "com.csuchico.tcgenius"
         }
       },
       "oauth_client": [
         {
-          "client_id": "624561503492-1cpjgmvv5sggu86fv1tbeb27ghs3lopo.apps.googleusercontent.com",
+          "client_id": "916844608462-bre0dfjumva0d7uflp6pq7r1s1ghc7lt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.csuchico.tcgenius",
+            "certificate_hash": "6d462bfa63fb09a2b99f2240e7f52b461e824b53"
+          }
+        },
+        {
+          "client_id": "916844608462-2s1ujfvak9ao9764m45daih3itr2h86h.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyCOVh9sDwfK46Fy31VsF05mhx7MSlbhuqw"
+          "current_key": "AIzaSyBm-7IAuzbvqNPMKI9Npu0DQ_ouDO7IzWs"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "624561503492-1cpjgmvv5sggu86fv1tbeb27ghs3lopo.apps.googleusercontent.com",
+              "client_id": "916844608462-2s1ujfvak9ao9764m45daih3itr2h86h.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

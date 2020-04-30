@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+// page for capturing receipt images
 class ReceiptBuilderFrame extends StatelessWidget {
   final List<String> _imgPaths;
   final Function _clickMore;

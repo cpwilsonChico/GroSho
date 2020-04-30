@@ -3,10 +3,9 @@ import 'classes.dart';
 import 'storage.dart';
 import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 import 'dart:io';
-import 'main.dart';
 import 'receipt_parser.dart';
 
-
+// page for checking / editing receipt data
 class ReceiptFinalizer extends StatefulWidget {
   final List<String> _imgPaths;
   final Function _clearData;
@@ -20,13 +19,15 @@ class ReceiptState extends State<ReceiptFinalizer> {
   Function _clearData;
   List<String> _imgPaths;
   ReceiptType receipt;
-  BuildContext myContext;
+
+  Map<String, int> indexMap;
 
   ReceiptState(this._imgPaths, this._clearData);
 
   @override
   initState() {
     super.initState();
+    indexMap = new Map<String, int>();
     _visionFunction = doVision();
   }
 
@@ -54,14 +55,49 @@ class ReceiptState extends State<ReceiptFinalizer> {
     print("PARSING FUTURE");
     ReceiptParser parser = new ReceiptParser(ocrData);
     receipt = await parser.parse();
+    print("POST PARSE");
+    setState((){});
+    setupIndexMap();
     return receipt;
+  }
+
+  void setupIndexMap() {
+    List<int> removeThese = new List<int>();
+    for (int i = 0; i < receipt.list.length; i++) {
+      GroceryItem gi = receipt.list[i];
+      String id = gi.getID();
+      if (indexMap.containsKey(id)) {
+        receipt.list[indexMap[id]].amount += gi.amount;
+        removeThese.add(i);
+      } else {
+        indexMap[gi.getID()] = i;
+      }
+    }
+
+    for (int i = 0; i < removeThese.length; i++) {
+      removeThese[i] -= i;
+      receipt.list.removeAt(removeThese[i]);
+    }
+  }
+
+  // adjusts indexMap after deleting an item
+  // 0 1 2 3 4
+  // 0 1   2 3
+  void deleteCleanup(int index) {
+    for (String key in indexMap.keys) {
+      if (indexMap[key] < index) continue;
+      if (indexMap[key] == index) {
+        indexMap.remove(key);
+      }
+      if (indexMap[key] > index) {
+        indexMap[key] -= 1;
+      }
+    }
   }
 
 
   @override
   Widget build(BuildContext context) {
-    print("setting context");
-    setState( () => this.myContext = context);
     return Scaffold(
       appBar: AppBar(
         title: Text("Confirm Your Receipt"),
@@ -71,12 +107,13 @@ class ReceiptState extends State<ReceiptFinalizer> {
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             _clearData();
-            if (receipt.pr == null) {
+            // if parsing failed, display error message
+            if ( (receipt == null) ? true : receipt.pr == null) {
               return Center(
                 child: Text("Failed to parse receipt. Try again."),
               );
             } else {
-              return ReceiptStager(receipt);
+              return ReceiptStager(receipt, deleteCleanup);
             }
           } else {
             return Center(
@@ -137,13 +174,11 @@ class ReceiptState extends State<ReceiptFinalizer> {
       await Databaser.insert(gi);
     }
     // pop to home page
-    //Navigator.of(myContext).popUntil( (route) => route.settings.name == "/");
     Navigator.pushNamedAndRemoveUntil(context, "/", (route) => false);
     //Navigator.pushNamed(context, "/");
   }
 
   Future<bool> showCancelDialog() async {
-    if (receipt.pr == null) return true;
     bool cancel = await showBinaryDialog("Cancel this receipt?", "You will have to scan the receipt again.");
     if (cancel == null) return false;
     return cancel;
@@ -155,14 +190,22 @@ class ReceiptState extends State<ReceiptFinalizer> {
     return done;
   }
 
+  // add new item, or increase amount of existing item
   void addItem(GroceryItem gi) {
-    receipt.list.add(gi);
+    String id = gi.getID();
+    if (indexMap.containsKey(id)) {
+      receipt.list[indexMap[id]].amount += gi.amount;
+    } else {
+      receipt.list.add(gi);
+      indexMap[id] = receipt.list.length-1;
+    }
     setState((){});
   }
 
   void bottomNavHandler(int index) async {
     switch (index) {
       case 0:
+        if (receipt == null) Navigator.pop(context);
         if (await showCancelDialog()) {
           Navigator.pop(context);
         }
@@ -184,18 +227,21 @@ class ReceiptState extends State<ReceiptFinalizer> {
   }
 }
 
+// shows receipt info and items
 class ReceiptStager extends StatefulWidget {
   final ReceiptType _receipt;
-  ReceiptStager(this._receipt);
-  State<ReceiptStager> createState() => StagerState(_receipt);
+  final Function deleteCleanup;
+  ReceiptStager(this._receipt, this.deleteCleanup);
+  State<ReceiptStager> createState() => StagerState(_receipt, deleteCleanup);
 }
 
 class StagerState extends State<ReceiptStager> {
   ReceiptType _receipt;
-  StagerState(this._receipt);
+  StagerState(this._receipt, this.deleteCleanup);
+  Function deleteCleanup;
 
   void editQuantity(int index, int amount) {
-    _receipt.list[index].amount += amount;
+    _receipt.list[index].changeAmount(amount);
     setState((){});
   }
   void deleteItem(BuildContext context, int index) async {
@@ -222,10 +268,84 @@ class StagerState extends State<ReceiptStager> {
     if (shouldDelete == null) return;
     if (!shouldDelete) return;
     _receipt.list.removeAt(index);
+    deleteCleanup(index);
     setState((){});
   }
 
+  void showTotalDialog() async {
+    String input = "";
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Change receipt total"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: '\$12.34',
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (String newVal) {
+                    input = newVal;
+                  }
+              ),
+            ]
+          ),
+          actions: <Widget>[
+            FlatButton(
+              child: Text("Cancel"),
+              onPressed: () => Navigator.pop(context),
+            ),
+            FlatButton(
+              child: Text("OK"),
+              onPressed: () {
+                try {
+                  double inputNum = double.parse(input);
+                  int index = input.indexOf(".");
+                  // no decimal
+                  if (index == -1) {
+                    int dollars = int.parse(input);
+                    _receipt.pr.setDollarsAndCents(dollars, 0);
+                  // decimal
+                  } else {
+                    String dolString = input.substring(0, index);
+                    int dollars = int.parse(dolString);
+                    String cenString = input.substring(index+1);
+                    if (cenString.length > 2) {
+                      cenString = cenString.substring(0, 2);
+                    }
+                    int cents = int.parse(cenString);
+                    if (cenString.length == 1) {
+                      cents *= 10;
+                    }
+                    _receipt.pr.setDollarsAndCents(dollars, cents);
+                  }
+                  setState((){});
+                  Navigator.pop(context);
+                } catch (e) {
+
+                }
+              }
+            )
+          ]
+        );
+      }
+    );
+  }
+
   Widget build(BuildContext context) {
+    Color moneyColor;
+    if ( (_receipt.pr == null) ? true : _receipt.pr.getDollarValue() < 0.01) {
+      print("dollar value: ${_receipt.pr.getDollarValue()}");
+      moneyColor = Color.fromARGB(255, 196, 166, 166);
+    } else {
+      moneyColor = Color.fromARGB(255, 166, 196, 166);
+    }
+
     return Container(
       width: MediaQuery.of(context).size.width,
       child: Column(
@@ -233,7 +353,7 @@ class StagerState extends State<ReceiptStager> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           Container(
-            padding: EdgeInsets.all(6.0),
+            padding: EdgeInsets.fromLTRB(12, 4, 12, 4),
             decoration: BoxDecoration(
               color: Color.fromARGB(0xFF, 0x80, 0x80, 0x80),
             ),
@@ -241,7 +361,14 @@ class StagerState extends State<ReceiptStager> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Text("Date: ${_receipt.pr.getDateAsFriendlyString()}"),
-                Text("Total: ${_receipt.pr.getDollarAmount()}"),
+                RaisedButton(
+                  color: moneyColor,
+                  child: Text(
+                    "Total: ${_receipt.pr.getDollarAmount()}",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  onPressed: showTotalDialog
+                ),
               ]
             )
           ),
@@ -268,6 +395,7 @@ class StagerState extends State<ReceiptStager> {
   }
 }
 
+// widget to display 1 grocery item
 class ItemStager extends StatelessWidget {
   final GroceryItem _item;
   final int myIndex;
@@ -283,52 +411,69 @@ class ItemStager extends StatelessWidget {
         //subtitle: Text(_item.id, style: TextStyle(fontSize: 8)),
         leading: Text("${_item.amount}"),
         children: <Widget>[
-          ItemEditWidget(this.myIndex, this.editQuantity, this.deleteItem),
+          ItemEditWidget(_item.getID(), this.myIndex, this.editQuantity, this.deleteItem),
         ]
       ),
     );
   }
 }
 
+// widget shown when expanding a grocery item, allowing item editing
 class ItemEditWidget extends StatefulWidget {
   final int myIndex;
   final Function editQuantity;
   final Function deleteItem;
-  ItemEditWidget(this.myIndex, this.editQuantity, this.deleteItem);
-  State<ItemEditWidget> createState() => ItemEditState(myIndex, editQuantity, deleteItem);
+  final String id;
+  ItemEditWidget(this.id, this.myIndex, this.editQuantity, this.deleteItem);
+  State<ItemEditWidget> createState() => ItemEditState(id, myIndex, editQuantity, deleteItem);
 }
 
 class ItemEditState extends State<ItemEditWidget> {
   final int myIndex;
   final Function editQuantity;
   final Function deleteItem;
-  ItemEditState(this.myIndex, this.editQuantity, this.deleteItem);
+  final String id;
+  ItemEditState(this.id, this.myIndex, this.editQuantity, this.deleteItem);
 
   Widget build(BuildContext context) {
-    return ButtonBar(
-      buttonPadding: EdgeInsets.fromLTRB(4, 0, 4, 0),
+    String displayID = id.replaceAll("_", " ").replaceAll("#", "/");
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        FlatButton(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(4, 0, 4, 0),
-            child: Text("DELETE", style: TextStyle(color: Colors.red)),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 73.0),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Text(displayID),
           ),
-          onPressed: () => deleteItem(context, myIndex),
         ),
-        FlatButton(
-          child: Icon(Icons.add, color: Colors.lightBlue),
-          onPressed: () => editQuantity(myIndex, 1),
-        ),
-        FlatButton(
-          child: Icon(Icons.remove, color: Colors.lightBlue),
-          onPressed: () => editQuantity(myIndex, -1)
+        ButtonBar(
+          buttonPadding: EdgeInsets.fromLTRB(4, 0, 4, 0),
+          children: <Widget>[
+            FlatButton(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(4, 0, 4, 0),
+                child: Text("DELETE", style: TextStyle(color: Colors.red)),
+              ),
+              onPressed: () => deleteItem(context, myIndex),
+            ),
+            FlatButton(
+              child: Icon(Icons.add, color: Colors.lightBlue),
+              onPressed: () => editQuantity(myIndex, 1),
+            ),
+            FlatButton(
+              child: Icon(Icons.remove, color: Colors.lightBlue),
+              onPressed: () => editQuantity(myIndex, -1)
+            )
+          ]
         )
       ]
     );
+
   }
 }
 
-
+// page for adding new items to the receipt list
 class NewItemMenu extends StatefulWidget {
   final Function addItem;
   NewItemMenu(this.addItem);
@@ -349,12 +494,13 @@ class NewItemMenuState extends State<NewItemMenu> {
         title: Text("New Item"),
       ),
       body: Center(
-        child: Stack(
-          children: <Widget>[
-            Column(
+        child: Padding(
+          padding: EdgeInsets.all(4.0),
+          child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Text("Enter the code exactly as it appears on the receipt (e.g. HOMOGZD MILK): "),
+                  SizedBox(height:10),
                   SizedBox(
                     width: MediaQuery.of(context).size.width,
                     child: TextField(
@@ -375,13 +521,18 @@ class NewItemMenuState extends State<NewItemMenu> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Text("Short description (e.g. Milk, Eggs): "),
+                          SizedBox(height:16),
+                          Text("Short description, max ${ReceiptParser.MAX_ITEM_LEN} characters (e.g. Milk, Eggs): "),
+                          SizedBox(height:10),
                           TextField(
                               decoration: InputDecoration(
                                 border: OutlineInputBorder(),
                                 labelText: 'Description',
                               ),
-                              onChanged: (newVal) {
+                              onChanged: (String newVal) {
+                                if (newVal.length > ReceiptParser.MAX_ITEM_LEN) {
+                                  newVal = newVal.substring(0, ReceiptParser.MAX_ITEM_LEN);
+                                }
                                 inputName = newVal;
                                 setState((){});
                               }
@@ -401,8 +552,6 @@ class NewItemMenuState extends State<NewItemMenu> {
                   )
                 ]
               ),
-
-          ]
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -417,13 +566,19 @@ class NewItemMenuState extends State<NewItemMenu> {
   }
 
   Future<void> submitHandler() async {
+    String originalInput = inputID;
+    inputID = inputID.toUpperCase();
+    inputID = inputID.replaceAll(" ", "_");
+    inputID = inputID.replaceAll("/", "#");
     waiting = true;
     setState((){});
 
     if (insertingIntoDB) {
-      bool success = await Databaser.insertCloudItem(new GroceryItem(inputID, inputName, 1));
+      GroceryItem gi = new GroceryItem(inputID, inputName, 1);
+      bool success = await Databaser.insertCloudItem(gi);
       waiting = false;
       if (success) {
+        addItem(gi);
         Navigator.pop(context);
       } else {
         setState((){});
@@ -448,6 +603,7 @@ class NewItemMenuState extends State<NewItemMenu> {
 
     int status = await Databaser.checkCodeExactly(inputID);
     if (status == 1) {
+
       String name = await Databaser.getNameByCode(inputID);
       GroceryItem gi = new GroceryItem(inputID, name, 1);
       addItem(gi);
@@ -460,7 +616,7 @@ class NewItemMenuState extends State<NewItemMenu> {
           context: context, builder: (context) {
             return AlertDialog(
                 title: Text("Item Code Not Found"),
-                content: Text("Could not find anything in the database that matched '$inputID'. Check your spelling, or add a new entry into the database."),
+                content: Text("Could not find anything in the database that matched '$originalInput'. Check your spelling, or add a new entry into the database."),
                 actions: [
                   FlatButton(
                       child: Text("GO BACK"),

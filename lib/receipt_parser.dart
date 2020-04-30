@@ -5,6 +5,7 @@ import 'classes.dart';
 
 class ReceiptParser {
   static const MAX_ITEM_LEN = 50;
+  static const MAX_EDIT_DIST = 2;
   ReceiptParser(this._ocr) {
     itemsFound = new List<GroceryItem>();
     queues = new List<List<String>>();
@@ -26,8 +27,8 @@ class ReceiptParser {
 
   String dollarString = "";
   String dateString = "";
-  int dollars = -1;
-  int cents = -1;
+  int dollars = 0;
+  int cents = 0;
 
 
 
@@ -55,12 +56,12 @@ class ReceiptParser {
 
     if (dollarString == "") {
       print("Could not determine total cost from receipt image.");
-      return nullRec;
+      //return nullRec;
     } else {
       double dollarValue = double.tryParse(dollarString);
       if (dollarValue == null) {
         print("Could not determine total cost from receipt image");
-        return nullRec;
+        //return nullRec;
       } else {
         dollars = dollarValue.truncate();
         try {
@@ -76,22 +77,52 @@ class ReceiptParser {
     print("PRE PROCESS ITEMS");
     await processItems();
     print("POST PROCESS ITEMS");
+    consolidateItems();
 
     String centsString = cents.toString();
     if (cents < 10) centsString = "0" + centsString;
     print("I think the receipt totalled \$$dollars.$centsString");
 
     bool goodDate = convertDateFormat();
-    if (!goodDate) return nullRec;
-    print("I think the date of this receipt is $dateString");
+    if (goodDate) {
+      print("I think the date of this receipt is $dateString");
+    }
 
-    DateTime receiptDate = DateTime.parse(dateString);
+    DateTime receiptDate;
+    try {
+      receiptDate = DateTime.parse(dateString);
+    } catch (e) {
+      print("error while parsing: ${e.toString()}");
+    }
 
+    print("end of PARSE 1");
     PurchaseRecord recPr = PurchaseRecord.withDateTime(dollars, cents, receiptDate);
+    print("end of PARSE 2");
     ReceiptType rec = new ReceiptType(recPr, itemsFound, null);
-    print("end of PARSE");
+    print("end of PARSE 3");
     return rec;
+  }
 
+  // combine duplicate grocery items
+  void consolidateItems() {
+    Map<String, int> indexMap = new Map<String, int>();
+    List<int> removeThese = new List<int>();
+
+    for (int i = 0; i < itemsFound.length; i++) {
+      String id = itemsFound[i].getID();
+      if (indexMap.containsKey(id)) {
+        itemsFound[indexMap[id]].amount += itemsFound[i].amount;
+        removeThese.add(i);
+      } else {
+        indexMap[id] = i;
+      }
+    }
+
+    for (int i = 0; i < removeThese.length; i++) {
+      // indices shift every time something is removed
+      removeThese[i] -= i;
+      itemsFound.removeAt(removeThese[i]);
+    }
   }
 
   // processes each queued grocery code by checking against firebase
@@ -102,18 +133,23 @@ class ReceiptParser {
       if (queues[i].isEmpty) continue;
       CollectionReference colref = Firestore.instance.collection("items$i");
       if (CollectionReference == null) continue;
-      QuerySnapshot snap = await colref.getDocuments();
-      print("POST SNAP");
-      for (DocumentSnapshot doc in snap.documents) {
-        String fromDB = doc.data["id"];
-        for (int j = 0; j < queues[i].length; j++) {
-          String candidate = queues[i][j];
-          if (lev.distance(fromDB, candidate) < 2) {
-            print("Found match: $candidate => $fromDB");
-            itemsFound.add(new GroceryItem(fromDB, doc.data["name"], 1));
-            queues[i].removeAt(j);
+
+      try {
+        QuerySnapshot snap = await colref.getDocuments();
+        print("POST SNAP");
+        for (DocumentSnapshot doc in snap.documents) {
+          String fromDB = doc.data["id"];
+          for (int j = 0; j < queues[i].length; j++) {
+            String candidate = queues[i][j];
+            if (lev.distance(fromDB, candidate) <= MAX_EDIT_DIST) {
+              print("Found match: $candidate => $fromDB");
+              itemsFound.add(new GroceryItem(fromDB, doc.data["name"], 1));
+              queues[i].removeAt(j);
+            }
           }
         }
+      } catch (e) {
+        print("error while parsing: ${e.toString()}");
       }
     }
 
@@ -132,7 +168,7 @@ class ReceiptParser {
   void addToList(String line) {
     line = line.trim();
     line = line.replaceAll(" ", "_");
-    line = line.replaceAll("/", "-");
+    line = line.replaceAll("/", "#");
     line = line.toUpperCase();
     if (line.contains("CRV")) return; // ignore CRV
     if (lev.distance(line, "REGULAR_PRICE") < 2) return;  // ignore discounts
@@ -153,10 +189,6 @@ class ReceiptParser {
     }
 
     return true;
-  }
-
-  void parseItems(String line) {
-
   }
 
   void tryParseItem(String line) {

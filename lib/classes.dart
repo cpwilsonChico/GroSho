@@ -1,83 +1,45 @@
-import 'dart:collection';
-/*
-enum QuantityType {
-  cups,
-  cans,
-  gallons,
-  ct,
-  lbs,
-  fl_oz,
-  unknown,
-}
-
-Map<String, QuantityType> strToQuantity = {
-  'unknown': QuantityType.unknown,
-  'None': QuantityType.unknown,
-  'cups': QuantityType.cups,
-  'cans': QuantityType.cans,
-  'gallons': QuantityType.gallons,
-  'ct': QuantityType.ct,
-  'lbs': QuantityType.lbs,
-  'fl_oz': QuantityType.fl_oz,
-};
-
-String quantityToString(QuantityType q) {
-  switch (q) {
-    case QuantityType.cups:
-      return 'cups';
-    case QuantityType.cans:
-      return 'cans';
-    case QuantityType.gallons:
-      return 'gallons';
-    case QuantityType.ct:
-      return 'ct';
-    case QuantityType.lbs:
-      return 'lbs';
-    case QuantityType.fl_oz:
-      return 'fl oz';
-    case QuantityType.unknown:
-      return 'None';
-    default:
-      return '';
-  }
-
-}*/
-
 class GroceryItem {
-  //QuantityType q;
   String id;
   String name;
   int amount;
   // image
 
   // syntactic sugar for init list
-  GroceryItem(this.id, this.name, this.amount);
+  GroceryItem(id, this.name, this.amount) {
+    this.id = id.replaceAll(" ", "_",).replaceAll("/", "#");
+  }
 
   GroceryItem.fromMap(Map<String, dynamic> map) {
     id = map['_id'];
     name = map['_name'];
     amount = map['_amount'];
-    //q = QuantityType.values[map['_type']];
 
   }
 
   String getID() {
     return id;
   }
-/*
-  String getQuantityAsString() {
-    if (amount == null) return '';
-    return amount.toStringAsFixed(2) + ' ' + ((q==QuantityType.unknown) ? '' : quantityToString(q));
-  }
-*/
+
   Map<String, dynamic> toMap() {
     var tempMap = <String, dynamic>{
       "_id": id,
       "_name": name,
-      //"_type": q.index,
       "_amount": amount,
     };
     return tempMap;
+  }
+
+  Map<String, dynamic> toCloudMap() {
+    var tempMap = <String, dynamic> {
+      "id": id.replaceAll(" ", "_").replaceAll("/", "#"),
+      "name": name,
+    };
+    return tempMap;
+  }
+
+  void changeAmount(int cnt) {
+    amount += cnt;
+    if (amount < 1) amount = 1;
   }
 }
 
@@ -212,6 +174,15 @@ class PurchaseRecord {
 
   int getID() {
     return _id;
+  }
+
+  void setDollarsAndCents(int d, int c) {
+    _dollars = d;
+    if (c >= 100 || c < 0) {
+      c = 0;
+    } else {
+      _cents = c;
+    }
   }
 
 }

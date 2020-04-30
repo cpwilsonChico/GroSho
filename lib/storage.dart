@@ -27,7 +27,7 @@ class Databaser {
     _id text PRIMARY KEY,
     _name TEXT,
     _type INTEGER,
-    _amount REAL)''');
+    _amount INTEGER)''');
       await db.execute('''
     CREATE TABLE $COST_DB(
     _id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,7 +129,6 @@ class Databaser {
     code = code.toUpperCase();
     DocumentReference doc = Firestore.instance.collection("items$len").document(code);
     DocumentSnapshot snap = await doc.get();
-    print("CHECK_CODE_EXACTLY: ${doc.toString()}");
     if (snap.data == null) {
       return -2;
     }
@@ -149,9 +148,16 @@ class Databaser {
   }
 
   static Future<bool> insertCloudItem(GroceryItem gi) async {
-    DocumentSnapshot doc = await Firestore.instance.collection("items${gi.getID().length}").document(gi.getID()).get();
+    String id = gi.getID().replaceAll(" ", "_").replaceAll("/", "#");
+    if (id.length > MAX_ITEM_LEN) {
+      return false;
+    }
+
+    CollectionReference colref = Firestore.instance.collection("items${id.length}");
+    DocumentSnapshot doc = await colref.document(id).get();
     if (doc.data == null) {
-      await Firestore.instance.collection("items${gi.getID().length}").add(gi.toMap());
+      DocumentReference docref = colref.document(id);
+      await docref.setData(gi.toCloudMap());
       return true;
     } else {
       print("ERROR: inserting item ${gi.getID()} already exists.");
