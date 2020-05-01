@@ -3,21 +3,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:core';
 import 'classes.dart';
 
+class ProtoItem {
+  int qty;
+  String id;
+  ProtoItem(this.id, this.qty);
+}
+
 class ReceiptParser {
-  static const MAX_ITEM_LEN = 50;
-  static const MAX_EDIT_DIST = 2;
+  static const MAX_ITEM_LEN = 30;
+  static const MAX_EDIT_DIST = 3;
   ReceiptParser(this._ocr) {
     itemsFound = new List<GroceryItem>();
-    queues = new List<List<String>>();
+    queues = new List<List<ProtoItem>>();
     for (int i = 0; i < MAX_ITEM_LEN; i++) {
-      queues.add(new List<String>());
+      queues.add(new List<ProtoItem>());
     }
   }
 
   ReceiptParser.blank();
 
   List<List<String>> _ocr;
-  List<List<String>> queues;
+  List<List<ProtoItem>> queues;
   List<GroceryItem> itemsFound;
   Levenshtein lev = new Levenshtein();
 
@@ -35,17 +41,22 @@ class ReceiptParser {
 
   Future<ReceiptType> parse() async {
     print("ocr length: ${_ocr.length}");
-    ReceiptType nullRec = ReceiptType.empty();
     for (int i = 0; i < _ocr.length; i++) {
       print("i: $i");
       List<String> block = _ocr[i];
       for (int j = 0; j < block.length; j++) {
         String line = block[j];
 
-        tryParseTransactionAmount(line, i);
+        print(line);
+        //print("PARSING TRANSACTION $i,$j");
+        //tryParseTransactionAmount(line, i);
+        print("PARSING BALANCE $i,$j");
         tryParseBalance(line, i);
+        print("PARSING DATE $i,$j");
         tryParseDate(line, i);
+        print("ADDING TO LIST $i,$j");
         addToList(line);
+        print("POST ADD TO LIST $i,$j");
         //tryParseDebit(line, i);
         //tryParseChange(line, i);
         //tryParseCBA(line, i);
@@ -96,9 +107,15 @@ class ReceiptParser {
     }
 
     print("end of PARSE 1");
-    PurchaseRecord recPr = PurchaseRecord.withDateTime(dollars, cents, receiptDate);
+    PurchaseRecord recPr;
+    try {
+      recPr = PurchaseRecord.withDateTime(
+          dollars, cents, receiptDate);
+    } catch (e) {
+      recPr = null;
+    }
     print("end of PARSE 2");
-    ReceiptType rec = new ReceiptType(recPr, itemsFound, null);
+    ReceiptType rec = new ReceiptType(recPr, itemsFound);
     print("end of PARSE 3");
     return rec;
   }
@@ -137,16 +154,19 @@ class ReceiptParser {
       try {
         QuerySnapshot snap = await colref.getDocuments();
         print("POST SNAP");
-        for (DocumentSnapshot doc in snap.documents) {
-          String fromDB = doc.data["id"];
-          for (int j = 0; j < queues[i].length; j++) {
-            String candidate = queues[i][j];
+
+        for (int j = 0; j < queues[i].length; j++) {
+          String candidate = queues[i][j].id;
+          for (DocumentSnapshot doc in snap.documents) {
+            String fromDB = doc.documentID;
             if (lev.distance(fromDB, candidate) <= MAX_EDIT_DIST) {
               print("Found match: $candidate => $fromDB");
-              itemsFound.add(new GroceryItem(fromDB, doc.data["name"], 1));
-              queues[i].removeAt(j);
+              itemsFound.add(new GroceryItem(fromDB, doc.data["name"], queues[i][j].qty));
+              //queues[i].removeAt(j);
+              break;
             }
           }
+          print("No match found for $candidate in $i");
         }
       } catch (e) {
         print("error while parsing: ${e.toString()}");
@@ -173,8 +193,32 @@ class ReceiptParser {
     if (line.contains("CRV")) return; // ignore CRV
     if (lev.distance(line, "REGULAR_PRICE") < 2) return;  // ignore discounts
     if (lev.distance(line, "CARD_SAVINGS") < 2) return;   // ignore discounts
-    queues[line.length].add(line);
-    print("length: ${line.length}");
+
+
+    // parse QTY from string
+    RegExp reg = RegExp(r"\d+_QTY_");
+    RegExpMatch match = reg.firstMatch(line);
+    // whether the string contains "##_QTY":
+    if (match == null) {
+      // ignore lines that are too long
+      if (line.length >= MAX_ITEM_LEN) return;
+      ProtoItem pi = ProtoItem(line, 1);
+      queues[line.length].add(pi);
+    } else {
+      RegExp qtyReg = RegExp(r"\d+");
+      RegExpMatch qtyMatch = qtyReg.firstMatch(line);
+      String qtyStr = line.substring(0, qtyMatch.end);
+      line = line.substring(match.end);
+      // ignore lines that are too long
+      if (line.length > MAX_ITEM_LEN) return;
+      try {
+        ProtoItem pi = ProtoItem(line, int.parse(qtyStr));
+        queues[line.length].add(pi);
+      } catch (e) {
+        ProtoItem pi = ProtoItem(line, 1);
+        queues[line.length].add(pi);
+      }
+    }
   }
 
   bool convertDateFormat() {
@@ -191,70 +235,67 @@ class ReceiptParser {
     return true;
   }
 
-  void tryParseItem(String line) {
-    line = line.trim();
-    line = line.replaceAll(" ", "_");
-    int strLen = line.length;
-    String collecName = "items" + strLen.toString();
-
-    Stream<QuerySnapshot> stream = Firestore.instance.collection(collecName).snapshots();
-    stream.listen(
-        (data) {
-          print("data: $data");
-          //if (lev.distance(line, data))
-        },
-        onDone: () {
-          print("Data stream complete.");
-        }
-    );
-  }
-
   void tryParseDate(String line, int index) {
-    RegExp regDate = new RegExp(r"\d\d/\d\d/\d\d \d\d:\d\d");
-    RegExpMatch match = regDate.firstMatch(line);
-    if (match == null) return;
-    String dateGuess = line.substring(match.start, match.end);
-    print(dateGuess);
+    try {
+      RegExp regDate = new RegExp(r"\d\d/\d\d/\d\d \d\d:\d\d");
+      RegExpMatch match = regDate.firstMatch(line);
+      if (match == null) return;
+      String dateGuess = line.substring(match.start, match.end);
+      print(dateGuess);
 
-    if (dateString == "")
-    {
+      if (dateString == "") {
         dateString = dateGuess;
-    } else {
-      // compare existing guess
-      if (lev.distance(dateGuess, dateString) > 0) {
-        print("Determined date $dateGuess does not match existing guess $dateString");
       } else {
-        print("Matching date found");
+        // compare existing guess
+        if (lev.distance(dateGuess, dateString) > 0) {
+          print(
+              "Determined date $dateGuess does not match existing guess $dateString");
+        } else {
+          print("Matching date found");
+        }
       }
+    } catch (e) {
+      print("error while parsing date: ${e.toString()}");
     }
   }
 
   void tryParseTransactionAmount(String line, int index) {
-    RegExp tReg = new RegExp(r"T[A-Za-z\d ]{3,5} T[A-Za-z\d ]{9,11} [A-Za-z\d ]{4,6}T:?\s*\d+[., ]?\d\d");
-    RegExpMatch match = tReg.firstMatch(line);
-    if (match == null) return;
-    print("Transaction regex match found: $line");
-    if (lev.distance("TOTAL TRANSACTION AMOUNT", line.substring(0, 25)) > 3) return;
-    print("Levenshtein check for TRANSACTION passed for $line");
+    try {
+      RegExp tReg = new RegExp(
+          r"T[A-Za-z\d ]{3,5} T[A-Za-z\d ]{9,11} [A-Za-z\d ]{4,6}T:?\s*\d+[., ]?\d\d");
+      RegExpMatch match = tReg.firstMatch(line);
+      if (match == null) return;
+      print("Transaction regex match found: $line");
+      if (lev.distance("TOTAL TRANSACTION AMOUNT", line.substring(0, 25)) > 3)
+        return;
+      print("Levenshtein check for TRANSACTION passed for $line");
 
-    RegExp dReg = new RegExp(r"\d+[., ]?\d\d");
-    RegExpMatch dolMatch = dReg.firstMatch(line);
-    String dolString = line.substring(dolMatch.start, dolMatch.end);
-    String balString = tryParseDollarFigure(dolString);
-    if (balString == null) return;
-    print ("Final TRANSACTION check passed");
-    compareDollarFigure(balString);
+      RegExp dReg = new RegExp(r"\d+[., ]?\d\d");
+      RegExpMatch dolMatch = dReg.firstMatch(line);
+      String dolString = line.substring(dolMatch.start, dolMatch.end);
+      String balString = tryParseDollarFigure(dolString);
+      if (balString == null) return;
+      print("Final TRANSACTION check passed");
+      compareDollarFigure(balString);
+    } catch (e) {
+      print("error while parsing transaction amount: ${e.toString()}");
+    }
   }
 
   void tryParseBalance(String line, int index) {
 
     // clear prefixed asterisks
-    while (line[0] == '*' || line[0] == 'x' || line[0] == 'X') line = line.substring(1);
-    line = line.trim();
-    // handle OCR errors
-    if (lev.distance('BALANCE', line) > 2) return;
-    print("Levenshtein check for BALANCE passed for $line");
-    tryParseBalanceProximity(index);
+    try {
+      while (line[0] == '*' || line[0] == 'x' || line[0] == 'X')
+        line = line.substring(1);
+      line = line.trim();
+      // handle OCR errors
+      if (lev.distance('BALANCE', line) > 2) return;
+      print("Levenshtein check for BALANCE passed for $line");
+      tryParseBalanceProximity(index);
+    } catch (e) {
+      print("error while parsing balance: ${e.toString()}");
+    }
   }
 
   void tryParseBalanceProximity(int index) {
